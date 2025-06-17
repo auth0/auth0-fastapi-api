@@ -37,14 +37,14 @@ trio = ["trio (>=0.26.1)"]
 
 [[package]]
 name = "auth0-api-python"
-version = "1.0.0b2"
+version = "1.0.0b3"
 description = "SDK for verifying access tokens and securing APIs with Auth0, using Authlib."
 optional = false
 python-versions = "<4.0,>=3.9"
 groups = ["main"]
 files = [
-    {file = "auth0_api_python-1.0.0b2-py3-none-any.whl", hash = "sha256:3e1bb0363b0833852d96cf438316cca728afdefbc6b597385cb3fda6f33eb4bf"},
-    {file = "auth0_api_python-1.0.0b2.tar.gz", hash = "sha256:380a92f407c2517463222a2d3bc9b51a0380148bfb4c3ff9dd99de98b03f64dc"},
+    {file = "auth0_api_python-1.0.0b3-py3-none-any.whl", hash = "sha256:b85325d416ac027b36b2ea3eb64e440e2986460b3ec8c88163724ce29ebe4735"},
+    {file = "auth0_api_python-1.0.0b3.tar.gz", hash = "sha256:c437ba001768a124a3742294b853a0d751fe68a1a77c2ee7901ef0dd0c921e8b"},
 ]
 
 [package.dependencies]
@@ -1414,4 +1414,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "aec7b3233e9a61e9fd7b917ebd5efed2e678f5ec1d56d3233859c53b0d3e9086"
+content-hash = "f69f90a4e6a7029a0858e1c510a18ec4b248d66d9c1e7de85b2652250fa15366"
