@@ -2,8 +2,6 @@ name: Publish Release
 
 on:
   workflow_dispatch:
-  pull_request:
-    types: [opened, reopened, synchronize]
 
 ### TODO: Replace instances of './.github/actions/' with reference to the `dx-sdk-actions` repo is made public and this file is transferred over
 ### TODO: Also remove `get-prerelease`, `get-version`, `release-create`, `tag-create` and `tag-exists` actions from this repo's .github/actions folder once the repo is public.
@@ -26,7 +24,7 @@ jobs:
       PRODSEC_TOOLS_TOKEN: ${{ secrets.PRODSEC_TOOLS_TOKEN }}
       PRODSEC_TOOLS_ARN: ${{ secrets.PRODSEC_TOOLS_ARN }}
   publish-pypi:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged && startsWith(github.event.pull_request.head.ref, 'release/'))
     name: "PyPI"
     runs-on: ubuntu-latest
     # needs: rl-scanner
