@@ -314,3 +314,15 @@ async def test_should_return_403_when_invalid_scope(httpx_mock: HTTPXMock):
     )
     assert response.status_code == 403
 
+def test_auth0fastapi_accepts_client_id_and_secret():
+    client_id = "test_client_id"
+    client_secret = "test_client_secret"
+    auth0 = Auth0FastAPI(
+        domain="auth0.local",
+        audience="test_audience",
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    options = auth0.api_client.options
+    assert options.client_id == client_id
+    assert options.client_secret == client_secret
