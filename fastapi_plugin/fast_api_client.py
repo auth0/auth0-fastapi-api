@@ -13,7 +13,7 @@ class Auth0FastAPI:
     mirroring the concept from TypeScript's Fastify plugin.
     """
 
-    def __init__(self, domain: str, audience: str, custom_fetch=None):
+    def __init__(self, domain: str, audience: str, client_id=None, client_secret=None, custom_fetch=None):
         """
         domain: Your Auth0 domain (like 'my-tenant.us.auth0.com')
         audience: API identifier from the Auth0 Dashboard
@@ -25,7 +25,7 @@ class Auth0FastAPI:
             raise ValueError("audience is required.")
 
         self.api_client = ApiClient(
-            ApiClientOptions(domain=domain, audience=audience, custom_fetch=custom_fetch)
+            ApiClientOptions(domain=domain, audience=audience, client_id=client_id, client_secret=client_secret, custom_fetch=custom_fetch)
         )
 
     def require_auth(

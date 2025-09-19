@@ -134,6 +134,34 @@ def test_public_route():
 
 </details>
 
+### 5. Get an access token for a connection
+
+If you need to get an access token for an upstream idp via a connection, you can use the `get_access_token_for_connection` method on the underlying api_client:
+
+```python
+import asyncio
+
+from auth0_fastapi_api import Auth0FastAPI
+
+async def main():
+    auth0 = Auth0FastAPI(
+        domain="<AUTH0_DOMAIN>",
+        audience="<AUTH0_AUDIENCE>",
+        client_id="<AUTH0_CLIENT_ID>",
+        client_secret="<AUTH0_CLIENT_SECRET>",
+    )
+    connection = "my-connection" # The Auth0 connection to the upstream idp
+    access_token = "..." # The Auth0 access token to exchange
+
+    connection_access_token = await auth0.api_client.get_access_token_for_connection({"connection": connection, "access_token": access_token})
+    # The returned token is the access token for the upstream idp
+    print(connection_access_token)
+
+asyncio.run(main())
+```
+
+More info https://auth0.com/docs/secure/tokens/token-vault
+
 ## Feedback
 
 ### Contributing
