@@ -37,7 +37,7 @@ pytest==8.3.5
 pytest-asyncio==0.20.3
 pytest-cov==4.1.0
 pytest-httpx==0.35.0
-pytest-mock==3.14.0
+pytest-mock==3.15.1
 readme_renderer==44.0
 requests==2.32.4
 requests-toolbelt==1.0.0
