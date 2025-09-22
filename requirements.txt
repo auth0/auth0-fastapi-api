@@ -1,5 +1,5 @@
 annotated-types==0.7.0
-anyio==4.9.0
+anyio==4.10.0
 auth0-api-python==1.0.0b5
 Authlib==1.5.2
 backports.tarfile==1.2.0
