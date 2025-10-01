@@ -17,4 +17,8 @@ ignore:
     - '*':
         reason: "Accepting jwcrypto’s LGPL-3.0 license for now"
         expires: "2030-12-31T23:59:59Z"
+  "snyk:lic:pip:cffi:Unknown":
+    - '*':
+        reason: "Accepting the Unknown license for now"
+        expires: "2030-12-31T23:59:59Z"
 patch: {}
