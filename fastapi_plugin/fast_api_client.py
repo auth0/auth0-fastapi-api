@@ -2,9 +2,9 @@ from typing import Optional, List, Union, Dict
 from fastapi import Request, HTTPException
 from starlette.responses import Response
 
-from .utils import get_bearer_token, validate_scopes, http_exception
+from .utils import validate_scopes, http_exception, get_canonical_url
 
-from auth0_api_python.api_client import ApiClient, ApiClientOptions, VerifyAccessTokenError
+from auth0_api_python.api_client import ApiClient, ApiClientOptions, BaseAuthError
 
 
 class Auth0FastAPI:
@@ -13,11 +13,25 @@ class Auth0FastAPI:
     mirroring the concept from TypeScript's Fastify plugin.
     """
 
-    def __init__(self, domain: str, audience: str, client_id=None, client_secret=None, custom_fetch=None):
+    def __init__(
+        self, 
+        domain: str, 
+        audience: str, 
+        client_id=None, 
+        client_secret=None, 
+        custom_fetch=None, 
+        dpop_enabled=True, 
+        dpop_required=False, 
+        dpop_iat_leeway=30, 
+        dpop_iat_offset=300):
         """
         domain: Your Auth0 domain (like 'my-tenant.us.auth0.com')
         audience: API identifier from the Auth0 Dashboard
         custom_fetch: optional HTTP fetch override for the underlying SDK
+        dpop_enabled: Enable DPoP support (default: True)
+        dpop_required: Require DPoP authentication, reject Bearer tokens (default: False)
+        dpop_iat_leeway: Clock skew tolerance for DPoP proof iat claim in seconds (default: 30)
+        dpop_iat_offset: Maximum DPoP proof age in seconds (default: 300)
         """
         if not domain:
             raise ValueError("domain is required.")
@@ -25,7 +39,17 @@ class Auth0FastAPI:
             raise ValueError("audience is required.")
 
         self.api_client = ApiClient(
-            ApiClientOptions(domain=domain, audience=audience, client_id=client_id, client_secret=client_secret, custom_fetch=custom_fetch)
+            ApiClientOptions(
+                domain=domain, 
+                audience=audience, 
+                client_id=client_id, 
+                client_secret=client_secret, 
+                custom_fetch=custom_fetch,
+                dpop_enabled=dpop_enabled,
+                dpop_required=dpop_required,
+                dpop_iat_leeway=dpop_iat_leeway,
+                dpop_iat_offset=dpop_iat_offset
+            )
         )
 
     def require_auth(
@@ -34,27 +58,31 @@ class Auth0FastAPI:
     ):
         """
         Returns an async FastAPI dependency that:
-         1) Extracts a 'Bearer' token from the Authorization header
-         2) Verifies it with auth0-api-python
+         1) Uses the unified verify_request() method to auto-detect Bearer or DPoP authentication
+         2) Verifies the request with auth0-api-python including full HTTP context
          3) If 'scopes' is provided, checks for them in the token's 'scope' claim
          4) Raises HTTPException on error
          5) On success, returns the decoded claims
         """
         async def _dependency(request: Request) -> Dict:
-            token = get_bearer_token(request)
-            if not token:
-                # No Authorization provided
-                raise http_exception(
-                    400,
-                    "invalid_request",
-                    "No Authorization provided"
-                )
             try:
-                claims = await self.api_client.verify_access_token(access_token=token)
-            except VerifyAccessTokenError as e:
+                claims = await self.api_client.verify_request(
+                    headers=dict(request.headers),
+                    http_method=request.method,
+                    http_url=get_canonical_url(request)
+                )
+            except BaseAuthError as e:
                 raise http_exception(
-                    status_code=401,
-                    error="invalid_token",
+                    status_code=e.get_status_code(),
+                    error=e.get_error_code(),
+                    error_desc=e.get_error_description(),
+                    headers=e.get_headers()
+                )
+            except Exception as e:
+                # Handle any unexpected errors
+                raise http_exception(
+                    status_code=400,
+                    error="invalid_request",
                     error_desc=str(e)
                 )
 
