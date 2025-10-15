@@ -25,13 +25,10 @@ PRIVATE_JWK = {
 # A private EC P-256 JWK for DPoP test usage.
 PRIVATE_DPOP_JWK = {
     "kty": "EC",
-    "alg": "ES256",
-    "use": "sig",
-    "kid": "DPOP_TEST_KEY",
     "crv": "P-256",
-    "x": "WKn-ZIGevcwGIyyrzFoZNBdaq9_TsqzGHwHitJBcBmXdA_x4ySJOjY_1WykDKVf_",
-    "y": "Hkwp7nOHFcFancWLb-AmIYhZaUO_6-DoV0oNNXLgr-M",
-    "d": "Hndv7ZZjs_ke8o9zXYo3iq-Yr8SewI5vrqd0pAvqPqg"
+    "x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+    "y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+    "d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
 }
 
 # Public counterpart for JWKS
@@ -41,8 +38,8 @@ PUBLIC_DPOP_JWK = {
     "use": "sig",
     "kid": "DPOP_TEST_KEY",
     "crv": "P-256",
-    "x": "WKn-ZIGevcwGIyyrzFoZNBdaq9_TsqzGHwHitJBcBmXdA_x4ySJOjY_1WykDKVf_",
-    "y": "Hkwp7nOHFcFancWLb-AmIYhZaUO_6-DoV0oNNXLgr-M"
+    "x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+    "y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"
 }
 
 
@@ -101,15 +98,18 @@ async def generate_token(
     key = JsonWebKey.import_key(PRIVATE_JWK)
     header = {"alg": "RS256", "kid": PRIVATE_JWK["kid"]}
     token = jwt.encode(header, token_claims, key)
-    return token
+    # Ensure we return a string, not bytes
+    return token.decode('utf-8') if isinstance(token, bytes) else token
 
 def base64url_encode(data: bytes) -> str:
     """Base64URL encode without padding."""
     return base64.urlsafe_b64encode(data).decode('ascii').rstrip('=')
 
-def sha256_hash(data: str) -> str:
+def sha256_hash(data: Union[str, bytes]) -> str:
     """SHA256 hash and base64url encode."""
-    return base64url_encode(hashlib.sha256(data.encode('utf-8')).digest())
+    if isinstance(data, str):
+        data = data.encode('utf-8')
+    return base64url_encode(hashlib.sha256(data).digest())
 
 def generate_jti() -> str:
     """Generate a random JTI (JWT ID) for DPoP proof."""
@@ -187,7 +187,8 @@ async def generate_dpop_proof(
     # Sign with private key
     key = JsonWebKey.import_key(PRIVATE_DPOP_JWK)
     proof_jwt = jwt.encode(header, proof_claims, key)
-    return proof_jwt
+    # Ensure we return a string, not bytes
+    return proof_jwt.decode('utf-8') if isinstance(proof_jwt, bytes) else proof_jwt
 
 async def generate_dpop_bound_token(
     domain: str,
@@ -245,4 +246,5 @@ async def generate_dpop_bound_token(
     key = JsonWebKey.import_key(PRIVATE_JWK)
     header = {"alg": "RS256", "kid": PRIVATE_JWK["kid"]}
     token = jwt.encode(header, token_claims, key)
-    return token
+    # Ensure we return a string, not bytes
+    return token.decode('utf-8') if isinstance(token, bytes) else token

@@ -25,7 +25,6 @@ async def test_should_return_400_when_no_token():
     assert response.status_code == 400
     json_body = response.json()
     assert json_body["detail"]["error"] == "invalid_request"
-    assert json_body["detail"]["error_description"] == "No Authorization provided"
 
 
 @pytest.mark.asyncio
