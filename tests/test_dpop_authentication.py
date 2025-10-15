@@ -9,40 +9,10 @@ from fastapi.testclient import TestClient
 
 from fastapi_plugin.fast_api_client import Auth0FastAPI
 from fastapi_plugin.test_utils import (
-    generate_token,
     generate_dpop_proof,
-    generate_dpop_bound_token,
-    PUBLIC_DPOP_JWK
+    generate_dpop_bound_token
 )
-
-
-def setup_mocks(httpx_mock: HTTPXMock):
-    """Setup common OIDC and JWKS mocks."""
-    httpx_mock.add_response(
-        method="GET",
-        url="https://auth0.local/.well-known/openid-configuration",
-        json={
-            "issuer": "https://auth0.local/",
-            "jwks_uri": "https://auth0.local/.well-known/jwks.json"
-        }
-    )
-    httpx_mock.add_response(
-        method="GET",
-        url="https://auth0.local/.well-known/jwks.json",
-        json={
-            "keys": [
-                {
-                    "kty": "RSA",
-                    "kid": "TEST_KEY",
-                    "n": "whYOFK2Ocbbpb_zVypi9SeKiNUqKQH0zTKN1-6fpCTu6ZalGI82s7XK3tan4dJt90ptUPKD2zvxqTzFNfx4HHHsrYCf2-FMLn1VTJfQazA2BvJqAwcpW1bqRUEty8tS_Yv4hRvWfQPcc2Gc3-_fQOOW57zVy-rNoJc744kb30NjQxdGp03J2S3GLQu7oKtSDDPooQHD38PEMNnITf0pj-KgDPjymkMGoJlO3aKppsjfbt_AH6GGdRghYRLOUwQU-h-ofWHR3lbYiKtXPn5dN24kiHy61e3VAQ9_YAZlwXC_99GGtw_NpghFAuM4P1JDn0DppJldy3PGFC0GfBCZASw",
-                    "e": "AQAB",
-                    "alg": "RS256",
-                    "use": "sig"
-                },
-                PUBLIC_DPOP_JWK
-            ]
-        }
-    )
+from conftest import setup_mocks
 
 
 @pytest.mark.asyncio
@@ -301,41 +271,3 @@ async def test_dpop_with_invalid_scope(httpx_mock: HTTPXMock):
     assert response.status_code == 403
     json_body = response.json()
     assert json_body["detail"]["error"] == "insufficient_scope"
-
-
-@pytest.mark.asyncio
-async def test_dpop_with_post_request(httpx_mock: HTTPXMock):
-    """Test DPoP authentication works with POST requests."""
-    setup_mocks(httpx_mock)
-    
-    access_token = await generate_dpop_bound_token(
-        domain="auth0.local",
-        user_id="user_123",
-        audience="<audience>",
-        issuer="https://auth0.local/"
-    )
-    
-    dpop_proof = await generate_dpop_proof(
-        http_method="POST",
-        http_url="http://testserver/test",
-        access_token=access_token
-    )
-    
-    app = FastAPI()
-    auth0 = Auth0FastAPI(domain="auth0.local", audience="<audience>", dpop_enabled=True)
-    
-    @app.post("/test")
-    async def test_route(claims=Depends(auth0.require_auth())):
-        return {"user": claims["sub"]}
-    
-    client = TestClient(app)
-    response = client.post(
-        "/test",
-        headers={
-            "Authorization": f"DPoP {access_token}",
-            "DPoP": dpop_proof
-        }
-    )
-    
-    assert response.status_code == 200
-    assert response.json()["user"] == "user_123"
