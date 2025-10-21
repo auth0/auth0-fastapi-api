@@ -7,7 +7,7 @@
 ## Documentation
 
 - [QuickStart](https://auth0.com/docs/quickstart/webapp/fastapi)- our guide for adding Auth0 to your Fastapi app.
-- [Examples](https://github.com/auth0/auth0-server-python/blob/main/packages/auth0_server_python/EXAMPLES.md) - examples for your different use cases.
+- [Examples](https://github.com/auth0/auth0-fastapi-api/blob/main/EXAMPLES.md) - examples for your different use cases.
 - [Docs Site](https://auth0.com/docs) - explore our docs site and learn more about Auth0.
 
 ## Getting Started
@@ -33,7 +33,7 @@ In your FastAPI application, create an instance of the `Auth0FastAPI` class. Sup
 - The `AUTH0_AUDIENCE` is the identifier of the API that is being called. You can find this in the API section of the Auth0 dashboard.
 
 ```python
-from fastapi_plugin import Auth0FastAPI
+from fastapi_plugin.fast_api_client import Auth0FastAPI
 
 # Create the Auth0 integration
 auth0 = Auth0FastAPI(
@@ -79,7 +79,7 @@ When deploying behind a reverse proxy (nginx, AWS ALB, etc.), you **must** enabl
 
 ```python
 from fastapi import FastAPI
-from fastapi_plugin import Auth0FastAPI
+from fastapi_plugin.fast_api_client import Auth0FastAPI
 
 app = FastAPI()
 
@@ -160,7 +160,7 @@ You can parse or validate these claims however you like in your application code
 In case you don't need to use the `claims` dictionary in your endpoint you can also use the dependency as part of the path decorator. For example:
 
 ```python
-@app.get("/protected", dependencies=Depends(auth0.require_auth()))
+@app.get("/protected", dependencies=[Depends(auth0.require_auth())])
 async def protected():
     # Protected endpoint 
     return {"msg": "You need to have an access token to see this endpoint."}
@@ -264,7 +264,7 @@ If you need to get an access token for an upstream idp via a connection, you can
 ```python
 import asyncio
 
-from auth0_fastapi_api import Auth0FastAPI
+from fastapi_plugin.fast_api_client import Auth0FastAPI
 
 async def main():
     auth0 = Auth0FastAPI(
