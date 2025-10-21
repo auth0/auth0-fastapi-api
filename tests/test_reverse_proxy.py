@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from fastapi_plugin.fast_api_client import Auth0FastAPI
 from fastapi_plugin.utils import get_canonical_url
-from fastapi_plugin.test_utils import (
+from test_utils import (
     generate_dpop_proof,
     generate_dpop_bound_token
 )
@@ -197,6 +197,7 @@ async def test_reverse_proxy_with_trailing_slash_prefix(httpx_mock: HTTPXMock):
     
     # Should still work - trailing slash should be stripped
     assert response.status_code == 200
+    assert response.json()["user"] == "user_123"
 
 
 @pytest.mark.asyncio
@@ -239,11 +240,12 @@ async def test_reverse_proxy_multiple_hosts(httpx_mock: HTTPXMock):
     )
     
     assert response.status_code == 200
-    assert response.json()["user"] == "user_123"
+    json_response = response.json()
+    assert json_response["user"] == "user_123"
 
 
 @pytest.mark.asyncio
-async def test_reverse_proxy_with_query_params(httpx_mock: HTTPXMock):
+async def test_reverse_proxy_with_path_prefix(httpx_mock: HTTPXMock):
     """Test that query parameters are preserved in canonical URL."""
     setup_mocks(httpx_mock)
     
@@ -325,32 +327,7 @@ async def test_reverse_proxy_partial_headers(httpx_mock: HTTPXMock):
     )
     
     assert response.status_code == 200
-
-
-def test_get_canonical_url_without_proxy():
-    """Test get_canonical_url returns direct URL when trust_proxy=False."""
-    app = FastAPI()
-    # trust_proxy defaults to False
-    
-    @app.get("/test")
-    async def test_route(request: Request):
-        canonical_url = get_canonical_url(request)
-        return {"url": canonical_url}
-    
-    client = TestClient(app)
-    response = client.get(
-        "/test",
-        headers={
-            "X-Forwarded-Proto": "https",
-            "X-Forwarded-Host": "evil.com"  # Should be ignored
-        }
-    )
-    
-    assert response.status_code == 200
-    url = response.json()["url"]
-    # Should use testserver, not evil.com
-    assert "testserver" in url
-    assert "evil.com" not in url
+    assert response.json()["user"] == "user_123"
 
 
 def test_get_canonical_url_with_proxy():

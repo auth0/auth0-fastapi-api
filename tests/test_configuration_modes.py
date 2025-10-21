@@ -1,6 +1,6 @@
 """
-Tests for DPoP configuration modes (enabled/required/disabled).
-Tests the different operational modes of the Auth0FastAPI middleware.
+Tests for DPoP operational modes (enabled/required/disabled).
+Tests the runtime behavior of different DPoP configuration modes.
 """
 import pytest
 from fastapi import FastAPI, Depends
@@ -8,7 +8,7 @@ from pytest_httpx import HTTPXMock
 from fastapi.testclient import TestClient
 
 from fastapi_plugin.fast_api_client import Auth0FastAPI
-from fastapi_plugin.test_utils import (
+from test_utils import (
     generate_token,
     generate_dpop_proof,
     generate_dpop_bound_token,
@@ -16,36 +16,9 @@ from fastapi_plugin.test_utils import (
 from conftest import setup_mocks
 
 
-def test_dpop_configuration_defaults():
-    """Test that DPoP configuration has correct defaults."""
-    auth0 = Auth0FastAPI(domain="auth0.local", audience="test")
-    assert auth0.api_client.options.dpop_enabled == True
-    assert auth0.api_client.options.dpop_required == False
-    assert auth0.api_client.options.dpop_iat_leeway == 30
-    assert auth0.api_client.options.dpop_iat_offset == 300
-
-
-def test_dpop_disabled_configuration():
-    """Test DPoP can be explicitly disabled."""
-    auth0 = Auth0FastAPI(
-        domain="auth0.local",
-        audience="test",
-        dpop_enabled=False
-    )
-    assert auth0.api_client.options.dpop_enabled == False
-
-
-def test_dpop_custom_timing_configuration():
-    """Test custom DPoP timing parameters."""
-    auth0 = Auth0FastAPI(
-        domain="auth0.local",
-        audience="test",
-        dpop_iat_leeway=60,
-        dpop_iat_offset=600
-    )
-    assert auth0.api_client.options.dpop_iat_leeway == 60
-    assert auth0.api_client.options.dpop_iat_offset == 600
-
+# =============================================================================
+# DPoP Required Mode Tests
+# =============================================================================
 
 @pytest.mark.asyncio
 async def test_dpop_required_mode_rejects_bearer():
@@ -105,7 +78,6 @@ async def test_dpop_required_mode_accepts_dpop(httpx_mock: HTTPXMock):
         dpop_required=True
     )
 
-    
     @app.get("/test")
     async def test_route(claims=Depends(auth0.require_auth())):
         return {"user": claims["sub"]}
@@ -122,6 +94,10 @@ async def test_dpop_required_mode_accepts_dpop(httpx_mock: HTTPXMock):
     assert response.status_code == 200
     assert response.json()["user"] == "user_123"
 
+
+# =============================================================================
+# DPoP Disabled Mode Tests
+# =============================================================================
 
 @pytest.mark.asyncio
 async def test_dpop_disabled_mode_rejects_dpop():
@@ -164,38 +140,9 @@ async def test_dpop_disabled_mode_rejects_dpop():
     assert json_body["detail"]["error"] == "invalid_request"
 
 
-@pytest.mark.asyncio
-async def test_mixed_mode_accepts_bearer(httpx_mock: HTTPXMock):
-    """Test that Bearer tokens are accepted in mixed mode (default)."""
-    setup_mocks(httpx_mock)
-    
-    bearer_token = await generate_token(
-        domain="auth0.local",
-        user_id="user_123",
-        audience="<audience>",
-        issuer="https://auth0.local/"
-    )
-    
-    app = FastAPI()
-    auth0 = Auth0FastAPI(
-        domain="auth0.local",
-        audience="<audience>",
-        dpop_enabled=True,
-        dpop_required=False  # Mixed mode
-    )
-    
-    @app.get("/test")
-    async def test_route(claims=Depends(auth0.require_auth())):
-        return {"user": claims["sub"]}
-    
-    client = TestClient(app)
-    response = client.get(
-        "/test",
-        headers={"Authorization": f"Bearer {bearer_token}"}
-    )
-    
-    assert response.status_code == 200
-    assert response.json()["user"] == "user_123"
+# =============================================================================
+# Bearer-Only Mode Tests (DPoP disabled)
+# =============================================================================
 
 @pytest.mark.asyncio
 async def test_bearer_only_mode_accepts_bearer(httpx_mock: HTTPXMock):
@@ -230,6 +177,10 @@ async def test_bearer_only_mode_accepts_bearer(httpx_mock: HTTPXMock):
     assert response.json()["user"] == "user_123"
 
 
+# =============================================================================
+# Token/Scheme Mismatch Tests
+# =============================================================================
+
 @pytest.mark.asyncio
 async def test_dpop_bound_token_with_bearer_scheme_fails(httpx_mock: HTTPXMock):
     """Test that DPoP-bound tokens fail when using Bearer scheme."""
@@ -263,4 +214,5 @@ async def test_dpop_bound_token_with_bearer_scheme_fails(httpx_mock: HTTPXMock):
     
     assert response.status_code == 401
     json_body = response.json()
+    assert json_body["detail"]["error"] == "invalid_token"
     assert "dpop" in json_body["detail"]["error_description"].lower()

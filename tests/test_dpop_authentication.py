@@ -8,7 +8,7 @@ from pytest_httpx import HTTPXMock
 from fastapi.testclient import TestClient
 
 from fastapi_plugin.fast_api_client import Auth0FastAPI
-from fastapi_plugin.test_utils import (
+from test_utils import (
     generate_dpop_proof,
     generate_dpop_bound_token
 )
@@ -55,7 +55,8 @@ async def test_dpop_authentication_success(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_dpop_authentication_missing_dpop_header(httpx_mock: HTTPXMock):
-    """Test DPoP request fails when DPoP header is missing."""
+    """Test DPoP request fails early when DPoP header is missing (before token validation)."""
+    # No setup_mocks needed - request fails before JWKS lookup
     
     access_token = await generate_dpop_bound_token(
         domain="auth0.local",
@@ -84,7 +85,8 @@ async def test_dpop_authentication_missing_dpop_header(httpx_mock: HTTPXMock):
 
 @pytest.mark.asyncio
 async def test_dpop_authentication_invalid_dpop_proof(httpx_mock: HTTPXMock):
-    """Test DPoP request fails with malformed DPoP proof."""
+    """Test DPoP request fails early with malformed DPoP proof (before token validation)."""
+    # No setup_mocks needed - request fails before JWKS lookup
     
     access_token = await generate_dpop_bound_token(
         domain="auth0.local",
