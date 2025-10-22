@@ -1,6 +1,7 @@
 ![Auth0 FastAPI API SDK](https://cdn.auth0.com/website/sdks/banners/auth0-fastapi-api-banner.png)
 
-![Release](https://img.shields.io/pypi/v/auth0-fastapi-api) ![Downloads](https://img.shields.io/pypi/dw/auth0-fastapi-api) [![License](https://img.shields.io/:license-MIT-blue.svg?style=flat)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/:license-MIT-blue.svg?style=flat)](https://opensource.org/licenses/MIT)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/auth0/auth0-fastapi-api)
 
 📚 [Documentation](#documentation) - 🚀 [Getting Started](#getting-started) - 💬 [Feedback](#feedback)
 
