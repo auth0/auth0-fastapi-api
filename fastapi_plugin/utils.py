@@ -3,28 +3,6 @@ from fastapi import Request, HTTPException
 from starlette.responses import Response
 from urllib.parse import urlparse, urlunparse
 
-
-
-def get_bearer_token(request: Request) -> Optional[str]:
-    """
-    Parse 'Authorization: Bearer <token>' from the incoming request.
-    Returns the token string or None if missing/invalid.
-    
-    DEPRECATED: This function is no longer used in the main auth flow.
-    The ApiClient.verify_request() method handles token extraction automatically.
-    """
-    auth_header = request.headers.get("authorization")
-    if not auth_header:
-        return None
-
-    parts = auth_header.split()
-    if len(parts) == 2 and parts[0].lower() == "bearer":
-        return parts[1]
-    return None
-
-
-# ===== ACTIVE UTILITY FUNCTIONS =====
-
 def http_exception(
     status_code: int,
     error: str,
@@ -109,7 +87,9 @@ def get_canonical_url(request: Request) -> str:
         # X-Forwarded-Proto: Override scheme if present
         forwarded_proto = request.headers.get("x-forwarded-proto")
         if forwarded_proto:
-            scheme = forwarded_proto.strip().lower()
+            proto = forwarded_proto.strip().lower()
+            if proto in ("http", "https"):
+                scheme = proto
         
         # X-Forwarded-Host: Override host, handling multiple proxies
         forwarded_host = request.headers.get("x-forwarded-host")
@@ -119,8 +99,13 @@ def get_canonical_url(request: Request) -> str:
         
         # X-Forwarded-Prefix: Prepend path prefix
         forwarded_prefix = request.headers.get("x-forwarded-prefix", "").strip()
-        if forwarded_prefix:
-            # Remove trailing slash from prefix to avoid double slashes
+        if forwarded_prefix and not any([
+            ".." in forwarded_prefix, forwarded_prefix.startswith("//"),
+            ":" in forwarded_prefix, "\x00" in forwarded_prefix,
+            "%2e%2e" in forwarded_prefix.lower()
+        ]):
+            if not forwarded_prefix.startswith("/"):
+                forwarded_prefix = "/" + forwarded_prefix
             path = forwarded_prefix.rstrip("/") + path
     
     canonical_url = urlunparse((

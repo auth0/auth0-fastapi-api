@@ -81,9 +81,9 @@ class Auth0FastAPI:
             except Exception as e:
                 # Handle any unexpected errors
                 raise http_exception(
-                    status_code=400,
-                    error="invalid_request",
-                    error_desc=str(e)
+                    status_code=500,
+                    error="internal_server_error",
+                    error_desc="An unexpected error occurred during authentication"
                 )
 
             # If scopes needed, validate
