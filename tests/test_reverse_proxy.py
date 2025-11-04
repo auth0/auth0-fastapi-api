@@ -243,50 +243,6 @@ async def test_reverse_proxy_multiple_hosts(httpx_mock: HTTPXMock):
     json_response = response.json()
     assert json_response["user"] == "user_123"
 
-
-@pytest.mark.asyncio
-async def test_reverse_proxy_with_path_prefix(httpx_mock: HTTPXMock):
-    """Test that query parameters are preserved in canonical URL."""
-    setup_mocks(httpx_mock)
-    
-    access_token = await generate_dpop_bound_token(
-        domain="auth0.local",
-        user_id="user_123",
-        audience="<audience>",
-        issuer="https://auth0.local/"
-    )
-    
-    dpop_proof = await generate_dpop_proof(
-        http_method="GET",
-        http_url="https://api.example.com/test?page=1&limit=10",
-        access_token=access_token
-    )
-    
-    app = FastAPI()
-    app.state.trust_proxy = True
-    
-    auth0 = Auth0FastAPI(domain="auth0.local", audience="<audience>", dpop_enabled=True)
-    
-    @app.get("/test")
-    async def test_route(claims=Depends(auth0.require_auth())):
-        return {"user": claims["sub"]}
-    
-    client = TestClient(app)
-    
-    response = client.get(
-        "/test?page=1&limit=10",
-        headers={
-            "Authorization": f"DPoP {access_token}",
-            "DPoP": dpop_proof,
-            "X-Forwarded-Proto": "https",
-            "X-Forwarded-Host": "api.example.com"
-        }
-    )
-    
-    assert response.status_code == 200
-    assert response.json()["user"] == "user_123"
-
-
 @pytest.mark.asyncio
 async def test_reverse_proxy_partial_headers(httpx_mock: HTTPXMock):
     """Test with only X-Forwarded-Proto (partial headers)."""

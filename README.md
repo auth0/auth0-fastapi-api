@@ -53,7 +53,7 @@ auth0 = Auth0FastAPI(
     domain="<AUTH0_DOMAIN>",
     audience="<AUTH0_AUDIENCE>",
     dpop_enabled=True,      # Enable DPoP support
-    dpop_required=False     # Allow Bearer tokens too
+    dpop_required=False     # Allow Bearer tokens too (mixed mode)
 )
 
 # DPoP-only mode - rejects Bearer tokens

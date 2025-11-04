@@ -75,6 +75,7 @@ def get_canonical_url(request: Request) -> str:
         Canonical URL string matching what the client used
     
     """
+    # Start with the direct connection URL
     parsed = urlparse(str(request.url))
     
     # Default to direct request values
