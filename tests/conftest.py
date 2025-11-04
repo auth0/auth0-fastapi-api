@@ -1,5 +1,5 @@
 from pytest_httpx import HTTPXMock
-from test_utils import PUBLIC_DPOP_JWK
+from .test_utils import PUBLIC_DPOP_JWK
 
 
 def setup_mocks(httpx_mock: HTTPXMock):

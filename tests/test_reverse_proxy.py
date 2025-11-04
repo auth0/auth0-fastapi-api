@@ -9,11 +9,11 @@ from fastapi.testclient import TestClient
 
 from fastapi_plugin.fast_api_client import Auth0FastAPI
 from fastapi_plugin.utils import get_canonical_url
-from test_utils import (
+from .test_utils import (
     generate_dpop_proof,
     generate_dpop_bound_token
 )
-from conftest import setup_mocks
+from .conftest import setup_mocks
 
 
 @pytest.mark.asyncio

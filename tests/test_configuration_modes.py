@@ -8,12 +8,12 @@ from pytest_httpx import HTTPXMock
 from fastapi.testclient import TestClient
 
 from fastapi_plugin.fast_api_client import Auth0FastAPI
-from test_utils import (
+from .test_utils import (
     generate_token,
     generate_dpop_proof,
     generate_dpop_bound_token,
 )
-from conftest import setup_mocks
+from .conftest import setup_mocks
 
 
 # =============================================================================
