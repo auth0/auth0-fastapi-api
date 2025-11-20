@@ -1,7 +1,7 @@
 # Core runtime dependencies
 fastapi>=0.115.11
 uvicorn>=0.34.0
-auth0-api-python>=1.0.0b5
+auth0-api-python>=1.0.0b6
 authlib>=1.5.2
 httpx>=0.28.1
 
