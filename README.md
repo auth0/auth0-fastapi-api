@@ -8,7 +8,7 @@
 ## Documentation
 
 - [QuickStart](https://auth0.com/docs/quickstart/webapp/fastapi)- our guide for adding Auth0 to your Fastapi app.
-- [Examples](https://github.com/auth0/auth0-server-python/blob/main/packages/auth0_server_python/EXAMPLES.md) - examples for your different use cases.
+- [Examples](https://github.com/auth0/auth0-fastapi-api/blob/main/EXAMPLES.md) - examples for your different use cases.
 - [Docs Site](https://auth0.com/docs) - explore our docs site and learn more about Auth0.
 
 ## Getting Started
@@ -34,7 +34,7 @@ In your FastAPI application, create an instance of the `Auth0FastAPI` class. Sup
 - The `AUTH0_AUDIENCE` is the identifier of the API that is being called. You can find this in the API section of the Auth0 dashboard.
 
 ```python
-from fastapi_plugin import Auth0FastAPI
+from fastapi_plugin.fast_api_client import Auth0FastAPI
 
 # Create the Auth0 integration
 auth0 = Auth0FastAPI(
@@ -43,9 +43,78 @@ auth0 = Auth0FastAPI(
 )
 ```
 
+#### DPoP Configuration (Optional)
+
+The SDK supports DPoP (Demonstrating Proof-of-Possession) for enhanced security:
+
+```python
+# Mixed mode - accepts both Bearer and DPoP (recommended for migration)
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",
+    audience="<AUTH0_AUDIENCE>",
+    dpop_enabled=True,      # Enable DPoP support
+    dpop_required=False     # Allow Bearer tokens too (mixed mode)
+)
+
+# DPoP-only mode - rejects Bearer tokens
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",
+    audience="<AUTH0_AUDIENCE>",
+    dpop_enabled=True,
+    dpop_required=True      # Only accept DPoP tokens
+)
+
+# Custom DPoP timing configuration
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",
+    audience="<AUTH0_AUDIENCE>",
+    dpop_enabled=True,
+    dpop_iat_leeway=30,     # Clock skew tolerance (seconds)
+    dpop_iat_offset=300     # Maximum DPoP proof age (seconds)
+)
+```
+
+#### Reverse Proxy Configuration
+
+When deploying behind a reverse proxy (nginx, AWS ALB, etc.), you **must** enable proxy trust for DPoP validation to work correctly:
+
+```python
+from fastapi import FastAPI
+from fastapi_plugin.fast_api_client import Auth0FastAPI
+
+app = FastAPI()
+
+# CRITICAL: Enable proxy trust when behind a reverse proxy
+app.state.trust_proxy = True
+
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",
+    audience="<AUTH0_AUDIENCE>",
+    dpop_enabled=True
+)
+```
+
+**Why this matters:**
+- DPoP validation requires matching the exact URL the client used
+- Behind a proxy, your app sees internal URLs (e.g., `http://localhost:8000/api`)
+- The client's DPoP proof contains the public URL (e.g., `https://api.example.com/api`)
+- Without `trust_proxy=True`, validation will fail
+
+**Note:** Only enable `trust_proxy=True` when your app is actually behind a trusted reverse proxy. Never enable this for direct internet-facing deployments, as it would allow header injection attacks.
+
+**Nginx Configuration Example:**
+```nginx
+location /api {
+    proxy_pass http://backend:8000;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Prefix /api;
+}
+```
+
 ### 3. Protecting API Routes
 
-To protect a FastAPI route, use the `require_auth(...)` dependency. Any incoming requests must include a valid Bearer token (JWT) in the `Authorization` header, or they will receive an error response (e.g., 401 Unauthorized).
+To protect a FastAPI route, use the `require_auth(...)` dependency. The SDK automatically detects and validates both Bearer and DPoP authentication schemes. Any incoming requests must include a valid token in the `Authorization` header, or they will receive an error response (e.g., 401 Unauthorized).
 
 ```python
 @app.get("/protected-api")
@@ -59,9 +128,18 @@ async def protected(
 
 #### How It Works
 
+**Bearer Authentication:**
 1. The user sends a request with `Authorization: Bearer <JWT>`.
-2. The SDK parses the token, checks signature via Auth0’s JWKS, validates standard claims like `iss`, `aud`, `exp`, etc.
-3. If valid, the route receives the decoded claims as a Python dict (e.g. `{"sub": "user123", "scope": "read:stuff", ...}`).
+2. The SDK parses the token, checks signature via Auth0's JWKS, validates standard claims like `iss`, `aud`, `exp`, etc.
+3. If valid, the route receives the decoded claims as a Python dict.
+
+**DPoP Authentication:**
+1. The user sends a request with `Authorization: DPoP <JWT>` and `DPoP: <proof-jwt>` headers.
+2. The SDK validates both the access token and the DPoP proof, including cryptographic binding.
+3. DPoP provides enhanced security through proof-of-possession of private keys.
+4. If valid, the route receives the decoded claims as a Python dict.
+
+The SDK automatically detects which authentication scheme is being used and validates accordingly.
 
 > [!IMPORTANT]  
 > This method protects API endpoints using bearer tokens. It does not **create or manage user sessions in server-side rendering scenarios**. For session-based usage, consider a separate library or approach.
@@ -83,7 +161,7 @@ You can parse or validate these claims however you like in your application code
 In case you don't need to use the `claims` dictionary in your endpoint you can also use the dependency as part of the path decorator. For example:
 
 ```python
-@app.get("/protected", dependencies=Depends(auth0.require_auth()))
+@app.get("/protected", dependencies=[Depends(auth0.require_auth())])
 async def protected():
     # Protected endpoint 
     return {"msg": "You need to have an access token to see this endpoint."}
@@ -135,14 +213,59 @@ def test_public_route():
 
 </details>
 
-### 5. Get an access token for a connection
+### 5. DPoP Authentication
+
+> **Note**: DPoP is currently in [Early Access](https://auth0.com/docs/troubleshoot/product-lifecycle/product-release-stages). Contact Auth0 support to enable it for your tenant.
+
+DPoP (Demonstrating Proof-of-Possession) provides enhanced security by binding access tokens to cryptographic proof of possession.
+
+#### Client Requirements
+
+To use DPoP authentication, clients must:
+
+1. **Generate an ES256 key pair** for DPoP proof signing
+2. **Include two headers** in requests:
+   - `Authorization: DPoP <access-token>` - The DPoP-bound access token
+   - `DPoP: <proof-jwt>` - The DPoP proof JWT
+
+#### Example DPoP Request
+
+```http
+GET /protected-api HTTP/1.1
+Host: api.example.com
+Authorization: DPoP eyJ0eXAiOiJKV1Q...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dC...
+```
+
+#### Migration Strategy
+
+Use mixed mode for gradual migration:
+
+```python
+# Start with mixed mode to support both Bearer and DPoP
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",
+    audience="<AUTH0_AUDIENCE>",
+    dpop_enabled=True,
+    dpop_required=False  # Allows both Bearer and DPoP
+)
+
+# Later, enforce DPoP-only
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",
+    audience="<AUTH0_AUDIENCE>",
+    dpop_required=True  # Rejects Bearer tokens
+)
+```
+
+### 6. Get an access token for a connection
 
 If you need to get an access token for an upstream idp via a connection, you can use the `get_access_token_for_connection` method on the underlying api_client:
 
 ```python
 import asyncio
 
-from auth0_fastapi_api import Auth0FastAPI
+from fastapi_plugin.fast_api_client import Auth0FastAPI
 
 async def main():
     auth0 = Auth0FastAPI(

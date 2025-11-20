@@ -8,7 +8,7 @@ readme = "README.md"
 
 packages = [
     { include = "fastapi_plugin" }
-]
+    ]
 
 [tool.poetry.dependencies]
 python = "^3.9"
