@@ -7,7 +7,6 @@
 
 ## Documentation
 
-- [QuickStart](https://auth0.com/docs/quickstart/webapp/fastapi)- our guide for adding Auth0 to your Fastapi app.
 - [Examples](https://github.com/auth0/auth0-fastapi-api/blob/main/EXAMPLES.md) - examples for your different use cases.
 - [Docs Site](https://auth0.com/docs) - explore our docs site and learn more about Auth0.
 
