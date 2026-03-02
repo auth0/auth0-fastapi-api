@@ -8,7 +8,7 @@ This document provides examples for using the `auth0-fastapi-api` package to sec
 - [DPoP Authentication](#dpop-authentication)
   - [Accept both Bearer and DPoP tokens (default)](#accept-both-bearer-and-dpop-tokens-default)
   - [Require only DPoP tokens](#require-only-dpop-tokens)
-  - [Require only Bearer tokens](#rquire-only-bearer-tokens)
+  - [Require only Bearer tokens](#require-only-bearer-tokens)
 - [Multiple Custom Domains (MCD)](#multiple-custom-domains-mcd)
   - [Static domain list](#static-domain-list)
   - [Dynamic resolver function](#dynamic-resolver-function)
@@ -160,6 +160,9 @@ auth0 = Auth0FastAPI(
     audience="your-api-identifier"
 )
 ```
+
+> [!WARNING]
+> `DomainsResolver` functions often rely on request headers such as `Host` or `X-Forwarded-Host`. These headers can be spoofed by clients unless your FastAPI instance is behind a trusted proxy and you have a clear trust boundary. Always validate/allowlist hosts and only honor forwarded headers from trusted infrastructure.
 
 ### Hybrid mode
 

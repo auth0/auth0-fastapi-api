@@ -42,51 +42,6 @@ auth0 = Auth0FastAPI(
 )
 ```
 
-#### Multiple Custom Domains (MCD)
-
-If your Auth0 tenant uses multiple custom domains, you can configure the SDK to accept tokens from any of them:
-
-**Static domain list:**
-```python
-auth0 = Auth0FastAPI(
-    domains=["tenant1.us.auth0.com", "tenant2.eu.auth0.com", "auth.example.com"],
-    audience="<AUTH0_AUDIENCE>"
-)
-```
-
-**Dynamic resolver function:**
-```python
-def resolve_domains(context):
-    # context contains: unverified_iss, request_url, request_headers
-    return ["tenant1.us.auth0.com", "auth.example.com"]
-
-auth0 = Auth0FastAPI(
-    domains=resolve_domains,
-    audience="<AUTH0_AUDIENCE>"
-)
-```
-
-**Hybrid mode** (for domain migration — `domain` for token exchange, `domains` for verification):
-```python
-auth0 = Auth0FastAPI(
-    domain="primary.us.auth0.com",
-    domains=["primary.us.auth0.com", "new-domain.example.com"],
-    audience="<AUTH0_AUDIENCE>",
-    client_id="<AUTH0_CLIENT_ID>",
-    client_secret="<AUTH0_CLIENT_SECRET>"
-)
-```
-
-**Custom cache configuration:**
-```python
-auth0 = Auth0FastAPI(
-    domains=["tenant1.us.auth0.com", "tenant2.eu.auth0.com"],
-    audience="<AUTH0_AUDIENCE>",
-    cache_ttl_seconds=1200,     # Cache TTL (default: 600s)
-    cache_max_entries=200        # Max cached domains (default: 100)
-)
-```
-
 #### DPoP Configuration (Optional)
 
 The SDK supports DPoP (Demonstrating Proof-of-Possession) for enhanced security:
@@ -329,6 +284,55 @@ asyncio.run(main())
 ```
 
 More info https://auth0.com/docs/secure/tokens/token-vault
+
+### 7. Multiple Custom Domains (MCD)
+
+The SDK supports accepting tokens from multiple Auth0 custom domains, enabling multi-tenant applications, zero-downtime domain migrations, and regional deployments.
+
+#### Static Domain List
+```python
+auth0 = Auth0FastAPI(
+    domains=["your-tenant.auth0.com", "custom-domain.example.com"],
+    audience="your-api-identifier"
+)
+```
+
+#### Dynamic Domain Resolver
+
+**Dynamic Resolver:**
+```python
+from fastapi_plugin import DomainsResolverContext
+
+def resolve_domains(context: DomainsResolverContext) -> list:
+    """Resolve allowed domains based on request context."""
+    # Access unverified issuer, request URL, and headers
+    return ["your-tenant.auth0.com", "custom-domain.example.com"]
+
+auth0 = Auth0FastAPI(
+    domains=resolve_domains,
+    audience="your-api-identifier"
+)
+```
+
+**Hybrid Mode:**
+```python
+auth0 = Auth0FastAPI(
+    domain="primary.us.auth0.com",          # Used for token exchange flows
+    domains=["primary.us.auth0.com", "new-domain.example.com"],  # Both accepted for verification
+    audience="your-api-identifier",
+    client_id="YOUR_CLIENT_ID",
+    client_secret="YOUR_CLIENT_SECRET"
+)
+```
+
+#### Key Features
+
+- **Double Issuer Validation:** Pre-signature and post-signature issuer checks prevent issuer confusion attacks
+- **Per-Issuer Caching:** OIDC metadata and JWKS are cached separately for each domain with configurable TTL and LRU eviction
+- **DPoP Compatible:** Full DPoP support works seamlessly across multiple domains
+- **Custom Cache Backends:** Plug in Redis, Memcached, or other cache implementations via the `CacheAdapter` interface
+
+📖 **For detailed examples including dynamic resolvers, cache configuration, and DPoP integration, see the [Multiple Custom Domains section in EXAMPLES.md](EXAMPLES.md#multiple-custom-domains-mcd).**
 
 ## Feedback
 
