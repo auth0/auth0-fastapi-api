@@ -42,6 +42,51 @@ auth0 = Auth0FastAPI(
 )
 ```
 
+#### Multiple Custom Domains (MCD)
+
+If your Auth0 tenant uses multiple custom domains, you can configure the SDK to accept tokens from any of them:
+
+**Static domain list:**
+```python
+auth0 = Auth0FastAPI(
+    domains=["tenant1.us.auth0.com", "tenant2.eu.auth0.com", "auth.example.com"],
+    audience="<AUTH0_AUDIENCE>"
+)
+```
+
+**Dynamic resolver function:**
+```python
+def resolve_domains(context):
+    # context contains: unverified_iss, request_url, request_headers
+    return ["tenant1.us.auth0.com", "auth.example.com"]
+
+auth0 = Auth0FastAPI(
+    domains=resolve_domains,
+    audience="<AUTH0_AUDIENCE>"
+)
+```
+
+**Hybrid mode** (for domain migration — `domain` for token exchange, `domains` for verification):
+```python
+auth0 = Auth0FastAPI(
+    domain="primary.us.auth0.com",
+    domains=["primary.us.auth0.com", "new-domain.example.com"],
+    audience="<AUTH0_AUDIENCE>",
+    client_id="<AUTH0_CLIENT_ID>",
+    client_secret="<AUTH0_CLIENT_SECRET>"
+)
+```
+
+**Custom cache configuration:**
+```python
+auth0 = Auth0FastAPI(
+    domains=["tenant1.us.auth0.com", "tenant2.eu.auth0.com"],
+    audience="<AUTH0_AUDIENCE>",
+    cache_ttl_seconds=1200,     # Cache TTL (default: 600s)
+    cache_max_entries=200        # Max cached domains (default: 100)
+)
+```
+
 #### DPoP Configuration (Optional)
 
 The SDK supports DPoP (Demonstrating Proof-of-Possession) for enhanced security:
