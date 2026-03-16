@@ -10,6 +10,7 @@ jobs:
   snyk-cli:
     uses: auth0/devsecops-tooling/.github/workflows/sca-scan.yml@main
     with:
+      pre-scan-commands: "pip install -r requirements.txt"
       additional-arguments: "--exclude=README.md"
       python-version: "3.12"
     secrets: inherit
