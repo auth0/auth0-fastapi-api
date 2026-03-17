@@ -1,5 +1,18 @@
+from typing import Dict, List
+
 from pytest_httpx import HTTPXMock
-from .test_utils import PUBLIC_DPOP_JWK
+from .test_utils import PUBLIC_DPOP_JWK, PRIVATE_JWK
+
+
+# RSA public key used across all test domains (shared key for simplicity)
+RSA_PUBLIC_KEY = {
+    "kty": "RSA",
+    "kid": "TEST_KEY",
+    "n": PRIVATE_JWK["n"],
+    "e": PRIVATE_JWK["e"],
+    "alg": "RS256",
+    "use": "sig"
+}
 
 
 def setup_mocks(httpx_mock: HTTPXMock):
@@ -17,15 +30,43 @@ def setup_mocks(httpx_mock: HTTPXMock):
         url="https://auth0.local/.well-known/jwks.json",
         json={
             "keys": [
-                {
-                    "kty": "RSA",
-                    "kid": "TEST_KEY",
-                    "n": "whYOFK2Ocbbpb_zVypi9SeKiNUqKQH0zTKN1-6fpCTu6ZalGI82s7XK3tan4dJt90ptUPKD2zvxqTzFNfx4HHHsrYCf2-FMLn1VTJfQazA2BvJqAwcpW1bqRUEty8tS_Yv4hRvWfQPcc2Gc3-_fQOOW57zVy-rNoJc744kb30NjQxdGp03J2S3GLQu7oKtSDDPooQHD38PEMNnITf0pj-KgDPjymkMGoJlO3aKppsjfbt_AH6GGdRghYRLOUwQU-h-ofWHR3lbYiKtXPn5dN24kiHy61e3VAQ9_YAZlwXC_99GGtw_NpghFAuM4P1JDn0DppJldy3PGFC0GfBCZASw",
-                    "e": "AQAB",
-                    "alg": "RS256",
-                    "use": "sig"
-                },
+                RSA_PUBLIC_KEY,
                 PUBLIC_DPOP_JWK
             ]
         }
     )
+
+
+def setup_mcd_mocks(httpx_mock: HTTPXMock, domains: List[str]):
+    """Setup OIDC and JWKS mocks for multiple domains in MCD tests.
+
+    Each domain gets its own .well-known/openid-configuration and
+    .well-known/jwks.json endpoints, all using the same RSA test key.
+
+    Args:
+        httpx_mock: pytest-httpx HTTPXMock fixture
+        domains: List of domain strings (e.g., ["tenant1.auth0.com", "tenant2.auth0.com"])
+    """
+    for domain in domains:
+        # Strip protocol and trailing slash if present
+        clean_domain = domain.replace("https://", "").replace("http://", "").rstrip("/")
+        base_url = f"https://{clean_domain}"
+
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{base_url}/.well-known/openid-configuration",
+            json={
+                "issuer": f"{base_url}/",
+                "jwks_uri": f"{base_url}/.well-known/jwks.json"
+            }
+        )
+        httpx_mock.add_response(
+            method="GET",
+            url=f"{base_url}/.well-known/jwks.json",
+            json={
+                "keys": [
+                    RSA_PUBLIC_KEY,
+                    PUBLIC_DPOP_JWK
+                ]
+            }
+        )

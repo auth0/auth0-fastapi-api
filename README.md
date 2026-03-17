@@ -285,6 +285,55 @@ asyncio.run(main())
 
 More info https://auth0.com/docs/secure/tokens/token-vault
 
+### 7. Multiple Custom Domains (MCD)
+
+The SDK supports accepting tokens from multiple Auth0 custom domains, enabling multi-tenant applications, zero-downtime domain migrations, and regional deployments.
+
+#### Static Domain List
+```python
+auth0 = Auth0FastAPI(
+    domains=["your-tenant.auth0.com", "custom-domain.example.com"],
+    audience="your-api-identifier"
+)
+```
+
+#### Dynamic Domain Resolver
+
+**Dynamic Resolver:**
+```python
+from fastapi_plugin import DomainsResolverContext
+
+def resolve_domains(context: DomainsResolverContext) -> list:
+    """Resolve allowed domains based on request context."""
+    # Access unverified issuer, request URL, and headers
+    return ["your-tenant.auth0.com", "custom-domain.example.com"]
+
+auth0 = Auth0FastAPI(
+    domains=resolve_domains,
+    audience="your-api-identifier"
+)
+```
+
+**Hybrid Mode:**
+```python
+auth0 = Auth0FastAPI(
+    domain="primary.us.auth0.com",          # Used for token exchange flows
+    domains=["primary.us.auth0.com", "new-domain.example.com"],  # Both accepted for verification
+    audience="your-api-identifier",
+    client_id="YOUR_CLIENT_ID",
+    client_secret="YOUR_CLIENT_SECRET"
+)
+```
+
+#### Key Features
+
+- **Double Issuer Validation:** Pre-signature and post-signature issuer checks prevent issuer confusion attacks
+- **Per-Issuer Caching:** OIDC metadata and JWKS are cached separately for each domain with configurable TTL and LRU eviction
+- **DPoP Compatible:** Full DPoP support works seamlessly across multiple domains
+- **Custom Cache Backends:** Plug in Redis, Memcached, or other cache implementations via the `CacheAdapter` interface
+
+📖 **For detailed examples including dynamic resolvers, cache configuration, and DPoP integration, see the [Multiple Custom Domains section in EXAMPLES.md](EXAMPLES.md#multiple-custom-domains-mcd).**
+
 ## Feedback
 
 ### Contributing
