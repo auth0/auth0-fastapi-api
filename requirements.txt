@@ -1,8 +1,7 @@
 # Core runtime dependencies
 fastapi>=0.115.11
-uvicorn>=0.34.0
 auth0-api-python>=1.0.0b6
-authlib>=1.5.2
+authlib>=1.6.6
 httpx>=0.28.1
 
 # Development and testing dependencies
@@ -11,3 +10,4 @@ pytest-asyncio>=0.26.0
 pytest-cov>=4.0
 pytest-httpx>=0.35.0
 pytest-mock>=3.15.1
+uvicorn>=0.34.0
