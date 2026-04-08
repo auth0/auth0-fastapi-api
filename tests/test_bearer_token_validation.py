@@ -454,3 +454,156 @@ async def test_mcd_token_with_insufficient_scopes(httpx_mock: HTTPXMock):
     assert response.status_code == 403
     json_body = response.json()
     assert json_body["detail"]["error"] == "insufficient_scope"
+
+@pytest.mark.asyncio
+async def test_mcd_resolver_receives_request_context(httpx_mock: HTTPXMock):
+    """Test that the domains resolver receives request_url and request_headers from the incoming request."""
+    setup_mcd_mocks(httpx_mock, ["secondary.auth0.com"])
+
+    resolved_context = {}
+
+    def capturing_resolver(context):
+        resolved_context.update(context)
+        return ["secondary.auth0.com"]
+
+    access_token = await generate_token(
+        domain="secondary.auth0.com",
+        user_id="user_123",
+        audience="<audience>",
+        issuer="https://secondary.auth0.com/",
+        iat=True,
+        exp=True
+    )
+
+    app = FastAPI()
+    auth0 = Auth0FastAPI(
+        domains=capturing_resolver,
+        audience="<audience>"
+    )
+
+    @app.get("/test")
+    async def test_route(claims=Depends(auth0.require_auth())):
+        return "OK"
+
+    client = TestClient(app)
+    response = client.get(
+        "/test",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "X-Custom-Header": "test-value"
+        }
+    )
+
+    assert response.status_code == 200
+    assert "unverified_iss" in resolved_context
+    assert resolved_context["unverified_iss"] == "https://secondary.auth0.com/"
+    assert "request_headers" in resolved_context
+    assert resolved_context["request_headers"]["x-custom-header"] == "test-value"
+
+
+@pytest.mark.asyncio
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+async def test_mcd_token_missing_iss_with_domains_enabled():
+    """Test that a token without 'iss' claim is rejected with 401 when using domains configuration."""
+    access_token = await generate_token(
+        domain="tenant1.auth0.com",
+        user_id="user_123",
+        audience="<audience>",
+        issuer=False,  # Omit issuer claim
+        iat=True,
+        exp=True
+    )
+
+    app = FastAPI()
+    auth0 = Auth0FastAPI(
+        domains=["tenant1.auth0.com"],
+        audience="<audience>"
+    )
+
+    @app.get("/test")
+    async def test_route(claims=Depends(auth0.require_auth())):
+        return "OK"
+
+    client = TestClient(app)
+    response = client.get(
+        "/test",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+
+    assert response.status_code == 401
+    json_body = response.json()
+    assert json_body["detail"]["error"] == "invalid_token"
+
+
+@pytest.mark.asyncio
+async def test_mcd_resolver_returns_empty_list_at_runtime():
+    """Test that a resolver returning an empty list at runtime results in an error."""
+    def empty_resolver(context):
+        return []
+
+    access_token = await generate_token(
+        domain="some.auth0.com",
+        user_id="user_123",
+        audience="<audience>",
+        issuer="https://some.auth0.com/",
+        iat=True,
+        exp=True
+    )
+
+    app = FastAPI()
+    auth0 = Auth0FastAPI(
+        domains=empty_resolver,
+        audience="<audience>"
+    )
+
+    @app.get("/test")
+    async def test_route(claims=Depends(auth0.require_auth())):
+        return "OK"
+
+    client = TestClient(app)
+    response = client.get(
+        "/test",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+
+    # Empty resolver list is treated as an error - token is not accepted
+    assert response.status_code in (401, 500)
+
+
+@pytest.mark.asyncio
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+async def test_mcd_issuer_not_in_resolved_domains_list(httpx_mock: HTTPXMock):
+    """Test that a token whose issuer is not in the resolver's returned list is rejected with 401."""
+    setup_mcd_mocks(httpx_mock, ["other.example.com"])
+
+    def resolver(context):
+        return ["other.example.com"]
+
+    access_token = await generate_token(
+        domain="secondary.auth0.com",
+        user_id="user_123",
+        audience="<audience>",
+        issuer="https://secondary.auth0.com/",
+        iat=True,
+        exp=True
+    )
+
+    app = FastAPI()
+    auth0 = Auth0FastAPI(
+        domains=resolver,
+        audience="<audience>"
+    )
+
+    @app.get("/test")
+    async def test_route(claims=Depends(auth0.require_auth())):
+        return "OK"
+
+    client = TestClient(app)
+    response = client.get(
+        "/test",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+
+    assert response.status_code == 401
+    json_body = response.json()
+    assert json_body["detail"]["error"] == "invalid_token"
