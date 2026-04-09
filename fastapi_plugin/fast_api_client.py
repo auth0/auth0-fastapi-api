@@ -1,11 +1,10 @@
-from typing import Optional, List, Union, Dict, Callable
-from fastapi import Request, HTTPException
-from starlette.responses import Response
-
-from .utils import validate_scopes, http_exception, get_canonical_url
+from typing import Callable, Optional, Union
 
 from auth0_api_python.api_client import ApiClient, ApiClientOptions, BaseAuthError
 from auth0_api_python.cache import CacheAdapter
+from fastapi import Request
+
+from .utils import get_canonical_url, http_exception, validate_scopes
 
 
 class Auth0FastAPI:
@@ -18,7 +17,7 @@ class Auth0FastAPI:
         self,
         domain: Optional[str] = None,
         audience: str = "",
-        domains: Optional[Union[List[str], Callable]] = None,
+        domains: Optional[Union[list[str], Callable]] = None,
         client_id=None,
         client_secret=None,
         custom_fetch=None,
@@ -73,7 +72,7 @@ class Auth0FastAPI:
 
     def require_auth(
         self,
-        scopes: Optional[Union[str, List[str]]] = None
+        scopes: Optional[Union[str, list[str]]] = None
     ):
         """
         Returns an async FastAPI dependency that:
@@ -83,7 +82,7 @@ class Auth0FastAPI:
          4) Raises HTTPException on error
          5) On success, returns the decoded claims
         """
-        async def _dependency(request: Request) -> Dict:
+        async def _dependency(request: Request) -> dict:
             try:
                 claims = await self.api_client.verify_request(
                     headers=dict(request.headers),
@@ -97,7 +96,7 @@ class Auth0FastAPI:
                     error_desc=e.get_error_description(),
                     headers=e.get_headers()
                 )
-            except Exception as e:
+            except Exception:
                 # Handle any unexpected errors
                 raise http_exception(
                     status_code=500,

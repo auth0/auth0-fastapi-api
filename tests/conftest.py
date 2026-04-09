@@ -1,8 +1,7 @@
-from typing import Dict, List
 
 from pytest_httpx import HTTPXMock
-from .test_utils import PUBLIC_DPOP_JWK, PRIVATE_JWK
 
+from .test_utils import PRIVATE_JWK, PUBLIC_DPOP_JWK
 
 # RSA public key used across all test domains (shared key for simplicity)
 RSA_PUBLIC_KEY = {
@@ -37,7 +36,7 @@ def setup_mocks(httpx_mock: HTTPXMock):
     )
 
 
-def setup_mcd_mocks(httpx_mock: HTTPXMock, domains: List[str]):
+def setup_mcd_mocks(httpx_mock: HTTPXMock, domains: list[str]):
     """Setup OIDC and JWKS mocks for multiple domains in MCD tests.
 
     Each domain gets its own .well-known/openid-configuration and

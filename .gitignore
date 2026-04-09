@@ -26,3 +26,5 @@ integration_test*.py
 .coverage
 coverage.xml
 
+# AI Tools
+.claude/
