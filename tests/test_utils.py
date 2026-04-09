@@ -1,10 +1,10 @@
-import time
-import hashlib
 import base64
+import hashlib
 import secrets
-from typing import Optional, Dict, Any, Union
-from authlib.jose import JsonWebKey, jwt
+import time
+from typing import Any, Optional, Union
 
+from authlib.jose import JsonWebKey, jwt
 
 # A private RSA JWK for test usage (Bearer tokens).
 PRIVATE_JWK = {
@@ -50,7 +50,7 @@ async def generate_token(
     issuer: Union[str, bool, None] = None,
     iat: bool = True,
     exp: bool = True,
-    claims: Optional[Dict[str, Any]] = None,
+    claims: Optional[dict[str, Any]] = None,
     expiration_time: int = 3600,
     token_type: str = "bearer"
 ) -> str:
@@ -89,7 +89,7 @@ async def generate_token(
 
     if audience:
         token_claims["aud"] = audience
-    
+
     # Add DPoP binding for DPoP tokens
     if token_type == "dpop":
         jkt = calculate_jwk_thumbprint(PRIVATE_DPOP_JWK)
@@ -115,7 +115,7 @@ def generate_jti() -> str:
     """Generate a random JTI (JWT ID) for DPoP proof."""
     return base64url_encode(secrets.token_bytes(16))
 
-def calculate_jwk_thumbprint(jwk_dict: Dict[str, Any]) -> str:
+def calculate_jwk_thumbprint(jwk_dict: dict[str, Any]) -> str:
     """Calculate JWK thumbprint for DPoP proof."""
     # For EC P-256 keys, thumbprint is calculated from crv, kty, x, y
     thumbprint_jwk = {
@@ -138,23 +138,23 @@ async def generate_dpop_proof(
 ) -> str:
     """
     Generate a DPoP proof JWT for testing.
-    
+
     Args:
         http_method: HTTP method (GET, POST, etc.)
         http_url: Full HTTP URL
         access_token: Access token to bind (for ath claim)
         nonce: Server nonce for DPoP proof
         iat_offset: Offset for iat claim (for testing expired proofs)
-    
+
     Returns:
         DPoP proof JWT string
     """
     current_time = int(time.time()) + iat_offset
     jti = generate_jti()
-    
+
     # Calculate JWK thumbprint for jkt claim
     jkt = calculate_jwk_thumbprint(PRIVATE_DPOP_JWK)
-    
+
     # DPoP proof claims
     proof_claims = {
         "jti": jti,
@@ -163,15 +163,15 @@ async def generate_dpop_proof(
         "iat": current_time,
         "jkt": jkt
     }
-    
+
     # Add access token hash if provided
     if access_token:
         proof_claims["ath"] = sha256_hash(access_token)
-    
+
     # Add nonce if provided
     if nonce:
         proof_claims["nonce"] = nonce
-    
+
     # Create header with public key
     header = {
         "alg": "ES256",
@@ -183,7 +183,7 @@ async def generate_dpop_proof(
             "y": PUBLIC_DPOP_JWK["y"]
         }
     }
-    
+
     # Sign with private key
     key = JsonWebKey.import_key(PRIVATE_DPOP_JWK)
     proof_jwt = jwt.encode(header, proof_claims, key)
@@ -197,14 +197,14 @@ async def generate_dpop_bound_token(
     issuer: Union[str, bool, None] = None,
     iat: bool = True,
     exp: bool = True,
-    claims: Optional[Dict[str, Any]] = None,
+    claims: Optional[dict[str, Any]] = None,
     expiration_time: int = 3600,
     cnf_jkt: Optional[str] = None
 ) -> str:
     """
     Generate a DPoP-bound access token for testing.
     Similar to generate_token but includes cnf claim with jkt.
-    
+
     Args:
         domain: Auth0 domain
         user_id: Subject claim
@@ -215,33 +215,33 @@ async def generate_dpop_bound_token(
         claims: Additional claims
         expiration_time: Token expiration in seconds
         cnf_jkt: JWK thumbprint for confirmation claim (auto-calculated if None)
-    
+
     Returns:
         DPoP-bound access token JWT string
     """
     token_claims = dict(claims or {})
     token_claims.setdefault("sub", user_id)
-    
+
     if iat:
         token_claims["iat"] = int(time.time())
-    
+
     if exp:
         token_claims["exp"] = int(time.time()) + expiration_time
-    
+
     if issuer is not False:
         token_claims["iss"] = issuer if isinstance(issuer, str) else f"https://{domain}/"
-    
+
     if audience:
         token_claims["aud"] = audience
-    
+
     # Add DPoP binding
     if cnf_jkt is None:
         cnf_jkt = calculate_jwk_thumbprint(PRIVATE_DPOP_JWK)
-    
+
     token_claims["cnf"] = {
         "jkt": cnf_jkt
     }
-    
+
     # Sign with RS256 (access tokens are still RS256, only DPoP proofs are ES256)
     key = JsonWebKey.import_key(PRIVATE_JWK)
     header = {"alg": "RS256", "kid": PRIVATE_JWK["kid"]}

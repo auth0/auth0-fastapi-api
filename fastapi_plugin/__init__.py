@@ -1,4 +1,3 @@
-from .fast_api_client import Auth0FastAPI
 from auth0_api_python import (
     CacheAdapter,
     ConfigurationError,
@@ -7,6 +6,8 @@ from auth0_api_python import (
     DomainsResolverError,
     InMemoryCache,
 )
+
+from .fast_api_client import Auth0FastAPI
 
 __all__ = [
     "Auth0FastAPI",
