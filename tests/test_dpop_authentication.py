@@ -12,7 +12,7 @@ from .test_utils import (
     generate_dpop_proof,
     generate_dpop_bound_token
 )
-from .conftest import setup_mocks
+from .conftest import setup_mocks, setup_mcd_mocks
 
 
 @pytest.mark.asyncio
@@ -273,3 +273,49 @@ async def test_dpop_with_invalid_scope(httpx_mock: HTTPXMock):
     assert response.status_code == 403
     json_body = response.json()
     assert json_body["detail"]["error"] == "insufficient_scope"
+
+
+# =============================================================================
+# MCD + DPoP Tests
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_mcd_dpop_with_static_domains(httpx_mock: HTTPXMock):
+    """Test DPoP authentication works with MCD static domain list."""
+    setup_mcd_mocks(httpx_mock, ["tenant1.auth0.com"])
+
+    access_token = await generate_dpop_bound_token(
+        domain="tenant1.auth0.com",
+        user_id="user_123",
+        audience="<audience>",
+        issuer="https://tenant1.auth0.com/"
+    )
+
+    dpop_proof = await generate_dpop_proof(
+        http_method="GET",
+        http_url="http://testserver/test",
+        access_token=access_token
+    )
+
+    app = FastAPI()
+    auth0 = Auth0FastAPI(
+        domains=["tenant1.auth0.com", "tenant2.auth0.com"],
+        audience="<audience>",
+        dpop_enabled=True
+    )
+
+    @app.get("/test")
+    async def test_route(claims=Depends(auth0.require_auth())):
+        return {"user": claims["sub"]}
+
+    client = TestClient(app)
+    response = client.get(
+        "/test",
+        headers={
+            "Authorization": f"DPoP {access_token}",
+            "DPoP": dpop_proof
+        }
+    )
+
+    assert response.status_code == 200
+    assert response.json()["user"] == "user_123"

@@ -285,6 +285,48 @@ asyncio.run(main())
 
 More info https://auth0.com/docs/secure/tokens/token-vault
 
+### 7. Multiple Custom Domains (MCD)
+
+The SDK supports accepting tokens from multiple Auth0 custom domains associated with the same tenant, enabling multi-brand applications, zero-downtime domain migrations, and regional deployments.
+
+#### Static Allowlist
+```python
+auth0 = Auth0FastAPI(
+    domains=["brand1.auth.example.com", "brand2.auth.example.com"],
+    audience="<AUTH0_AUDIENCE>"
+)
+```
+
+#### Dynamic Domain Resolver
+```python
+from fastapi_plugin import DomainsResolverContext
+
+def resolve_domains(context: DomainsResolverContext) -> list:
+    """Resolve allowed domains based on request context."""
+    # Access unverified issuer, request URL, and headers
+    return ["brand1.auth.example.com", "brand2.auth.example.com"]
+
+auth0 = Auth0FastAPI(
+    domains=resolve_domains,
+    audience="<AUTH0_AUDIENCE>"
+)
+```
+
+#### `domain` vs `domains` Configuration
+```python
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",                   # retained for client flows
+    domains=["<AUTH0_DOMAIN>", "custom.example.com"],  # used for verification
+    audience="<AUTH0_AUDIENCE>",
+    client_id="<AUTH0_CLIENT_ID>",
+    client_secret="<AUTH0_CLIENT_SECRET>"
+)
+```
+
+When both `domain` and `domains` are configured, the SDK uses `domains` exclusively for access token verification. The `domain` option should be retained only if your application also performs client-side flows (for example, `get_access_token_for_connection()`).
+
+For detailed examples including dynamic resolvers, cache configuration, security requirements, and DPoP integration, see the [Multiple Custom Domains section in EXAMPLES.md](EXAMPLES.md#multiple-custom-domains-mcd).
+
 ## Feedback
 
 ### Contributing

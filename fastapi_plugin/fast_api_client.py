@@ -1,10 +1,11 @@
-from typing import Optional, List, Union, Dict
+from typing import Optional, List, Union, Dict, Callable
 from fastapi import Request, HTTPException
 from starlette.responses import Response
 
 from .utils import validate_scopes, http_exception, get_canonical_url
 
 from auth0_api_python.api_client import ApiClient, ApiClientOptions, BaseAuthError
+from auth0_api_python.cache import CacheAdapter
 
 
 class Auth0FastAPI:
@@ -14,41 +15,59 @@ class Auth0FastAPI:
     """
 
     def __init__(
-        self, 
-        domain: str, 
-        audience: str, 
-        client_id=None, 
-        client_secret=None, 
-        custom_fetch=None, 
-        dpop_enabled=True, 
-        dpop_required=False, 
-        dpop_iat_leeway=30, 
-        dpop_iat_offset=300):
+        self,
+        domain: Optional[str] = None,
+        audience: str = "",
+        domains: Optional[Union[List[str], Callable]] = None,
+        client_id=None,
+        client_secret=None,
+        custom_fetch=None,
+        dpop_enabled=True,
+        dpop_required=False,
+        dpop_iat_leeway=30,
+        dpop_iat_offset=300,
+        cache_adapter: Optional[CacheAdapter] = None,
+        cache_ttl_seconds: int = 600,
+        cache_max_entries: int = 100):
         """
-        domain: Your Auth0 domain (like 'my-tenant.us.auth0.com')
+        domain: Your Auth0 domain (like 'my-tenant.us.auth0.com').
+                Use for single-domain mode. Optional if 'domains' is provided.
         audience: API identifier from the Auth0 Dashboard
+        domains: List of allowed domain strings or a callable resolver function for
+                 multi-custom domain (MCD) mode. Optional if 'domain' is provided.
+                 Callable signature: (DomainsResolverContext) -> list[str]
+        client_id: Client ID for token exchange flows
+        client_secret: Client secret for token exchange flows
         custom_fetch: optional HTTP fetch override for the underlying SDK
         dpop_enabled: Enable DPoP support (default: True)
         dpop_required: Require DPoP authentication, reject Bearer tokens (default: False)
         dpop_iat_leeway: Clock skew tolerance for DPoP proof iat claim in seconds (default: 30)
         dpop_iat_offset: Maximum DPoP proof age in seconds (default: 300)
+        cache_adapter: Custom cache backend implementing CacheAdapter (default: InMemoryCache)
+                       Note: When providing cache_adapter, configure it directly.
+                       The cache_max_entries parameter only applies when cache_adapter is None.
+        cache_ttl_seconds: Cache time-to-live in seconds (default: 600)
+        cache_max_entries: Maximum cache entries before LRU eviction (default: 100)
+                          Ignored when cache_adapter is provided.
         """
-        if not domain:
-            raise ValueError("domain is required.")
         if not audience:
             raise ValueError("audience is required.")
 
         self.api_client = ApiClient(
             ApiClientOptions(
-                domain=domain, 
-                audience=audience, 
-                client_id=client_id, 
-                client_secret=client_secret, 
+                domain=domain,
+                audience=audience,
+                domains=domains,
+                client_id=client_id,
+                client_secret=client_secret,
                 custom_fetch=custom_fetch,
                 dpop_enabled=dpop_enabled,
                 dpop_required=dpop_required,
                 dpop_iat_leeway=dpop_iat_leeway,
-                dpop_iat_offset=dpop_iat_offset
+                dpop_iat_offset=dpop_iat_offset,
+                cache_adapter=cache_adapter,
+                cache_ttl_seconds=cache_ttl_seconds,
+                cache_max_entries=cache_max_entries
             )
         )
 
