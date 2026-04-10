@@ -47,7 +47,7 @@ jobs:
         uses: auth0/devsecops-tooling/.github/actions/rl-scan@main
         with:
           artifact-name: "auth0-fastapi-api"
-          artifact-path: "auth0-fastapi-api.tgz"
+          artifact-path: "${{ github.workspace }}/auth0-fastapi-api.tgz"
           version: ${{ steps.get_version.outputs.version }}
           RLSECURE_LICENSE: ${{ secrets.RLSECURE_LICENSE }}
           RLSECURE_SITE_KEY: ${{ secrets.RLSECURE_SITE_KEY }}
