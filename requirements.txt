@@ -1,7 +1,7 @@
 # Core runtime dependencies
 fastapi>=0.115.11
 auth0-api-python>=1.0.0b6
-authlib>=1.6.6
+authlib>=1.6.12
 httpx>=0.28.1
 
 # Development and testing dependencies
