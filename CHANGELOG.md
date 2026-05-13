@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.0.0b8](https://github.com/auth0/auth0-fastapi-api/tree/v1.0.0b8) (2026-05-13)
+
+**Fixed**
+- fix: use absolute artifact path for RL scanner [\#88](https://github.com/auth0/auth0-fastapi-api/pull/88) ([@kishore7snehil](https://github.com/kishore7snehil))
+
+
 ## [1.0.0b7](https://github.com/auth0/auth0-fastapi-api/tree/1.0.0b7) (2026-04-09)
 [Full Changelog](https://github.com/auth0/auth0-fastapi-api/compare/1.0.0b6...1.0.0b7)
 
