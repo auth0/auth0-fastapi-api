@@ -33,7 +33,7 @@ In your FastAPI application, create an instance of the `Auth0FastAPI` class. Sup
 - The `AUTH0_AUDIENCE` is the identifier of the API that is being called. You can find this in the API section of the Auth0 dashboard.
 
 ```python
-from fastapi_plugin.fast_api_client import Auth0FastAPI
+from fastapi_plugin import Auth0FastAPI
 
 # Create the Auth0 integration
 auth0 = Auth0FastAPI(
@@ -79,7 +79,7 @@ When deploying behind a reverse proxy (nginx, AWS ALB, etc.), you **must** enabl
 
 ```python
 from fastapi import FastAPI
-from fastapi_plugin.fast_api_client import Auth0FastAPI
+from fastapi_plugin import Auth0FastAPI
 
 app = FastAPI()
 
@@ -185,7 +185,7 @@ async def read_data_route(
 
 ```python
 from fastapi import FastAPI, Depends
-from auth0_fastapi_api import Auth0FastAPI
+from fastapi_plugin import Auth0FastAPI
 from fastapi.testclient import TestClient
 
 app = FastAPI()
@@ -264,7 +264,7 @@ If you need to get an access token for an upstream idp via a connection, you can
 ```python
 import asyncio
 
-from fastapi_plugin.fast_api_client import Auth0FastAPI
+from fastapi_plugin import Auth0FastAPI
 
 async def main():
     auth0 = Auth0FastAPI(
