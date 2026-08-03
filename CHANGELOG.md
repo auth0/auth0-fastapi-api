@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.0.0b8](https://github.com/auth0/auth0-fastapi-api/tree/1.0.0b8) (2026-08-03)
+[Full Changelog](https://github.com/auth0/auth0-fastapi-api/compare/1.0.0b7...1.0.0b8)
+
+**Deprecation**
+- Support for Python 3.9.0 and 3.9.1 is dropped. 
+- Support for Python 3.9 can be dropped in future releases. Please plan your upgrades accordingly.
+
+**Change**
+- chore: Documentation and dependency update [\#118](https://github.com/auth0/auth0-api-python/pull/118) ([rmad17](https://github.com/rmad17))
+
 ## [1.0.0b7](https://github.com/auth0/auth0-fastapi-api/tree/1.0.0b7) (2026-04-09)
 [Full Changelog](https://github.com/auth0/auth0-fastapi-api/compare/1.0.0b6...1.0.0b7)
 
