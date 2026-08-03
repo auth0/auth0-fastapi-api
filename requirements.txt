@@ -1,36 +1,13 @@
-ada-url==1.27.0 ; python_version == "3.9"
-ada-url==1.32.0 ; python_version >= "3.10" and python_version < "4.0"
-annotated-doc==0.0.5 ; python_version >= "3.9" and python_version < "4.0"
-annotated-types==0.7.0 ; python_version == "3.9"
-annotated-types==0.8.0 ; python_version >= "3.10" and python_version < "4.0"
-anyio==4.12.1 ; python_version == "3.9"
-anyio==4.14.2 ; python_version >= "3.10" and python_version < "4.0"
-auth0-api-python==1.0.0b9 ; python_version >= "3.9" and python_version < "4.0"
-authlib==1.6.12 ; python_version == "3.9"
-authlib==1.7.2 ; python_version >= "3.10" and python_version < "4.0"
-certifi==2026.7.22 ; python_version >= "3.9" and python_version < "4.0"
-cffi==2.0.0 ; python_version == "3.9"
-cffi==2.1.0 ; python_version >= "3.10" and python_version < "4.0"
-charset-normalizer==3.4.9 ; python_version >= "3.9" and python_version < "4.0"
-cryptography==43.0.3 ; python_version == "3.9"
-cryptography==50.0.0 ; python_version >= "3.10" and python_version < "4.0"
-exceptiongroup==1.3.1 ; python_version >= "3.9" and python_version < "3.11"
-fastapi==0.128.8 ; python_version == "3.9"
-fastapi==0.141.1 ; python_version >= "3.10" and python_version < "4.0"
-h11==0.16.0 ; python_version >= "3.9" and python_version < "4.0"
-httpcore==1.0.9 ; python_version >= "3.9" and python_version < "4.0"
-httpx==0.28.1 ; python_version >= "3.9" and python_version < "4.0"
-idna==3.18 ; python_version >= "3.9" and python_version < "4.0"
-joserfc==1.7.4 ; python_version >= "3.10" and python_version < "4.0"
-pycparser==2.23 ; python_version == "3.9" and implementation_name != "PyPy"
-pycparser==3.0 ; python_version >= "3.10" and python_version < "4.0" and implementation_name != "PyPy"
-pydantic-core==2.46.4 ; python_version >= "3.9" and python_version < "4.0"
-pydantic==2.13.4 ; python_version >= "3.9" and python_version < "4.0"
-requests==2.32.5 ; python_version == "3.9"
-requests==2.34.2 ; python_version >= "3.10" and python_version < "4.0"
-starlette==0.49.3 ; python_version == "3.9"
-starlette==1.3.1 ; python_version >= "3.10" and python_version < "4.0"
-typing-extensions==4.16.0 ; python_version >= "3.9" and python_version < "4.0"
-typing-inspection==0.4.2 ; python_version >= "3.9" and python_version < "4.0"
-urllib3==2.6.3 ; python_version == "3.9"
-urllib3==2.7.0 ; python_version >= "3.10" and python_version < "4.0"
+# Core runtime dependencies
+fastapi>=0.115.11
+auth0-api-python>=1.0.0b10
+authlib>=1.6.12
+httpx>=0.28.1
+
+# Development and testing dependencies
+pytest>=8.0
+pytest-asyncio>=0.26.0
+pytest-cov>=4.0
+pytest-httpx>=0.35.0
+pytest-mock>=3.15.1
+uvicorn>=0.34.0

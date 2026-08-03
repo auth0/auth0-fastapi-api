@@ -11,10 +11,10 @@ packages = [
     ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.9.2"
 fastapi = ">=0.115.11"
 httpx = ">=0.28.1"
-auth0-api-python = ">=1.0.0b8"
+auth0-api-python = ">=1.0.0b10"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
