@@ -16,12 +16,12 @@
   - [Security Requirements](#security-requirements)
   - [DPoP with MCD](#dpop-with-mcd)
 - [Discovery Cache Configuration](#discovery-cache-configuration)
+- [Protecting API Routes](#protecting-api-routes)
 - [On-Behalf-Of Token Exchange](#on-behalf-of-token-exchange)
   - [Performing the Exchange](#performing-the-exchange)
   - [`get_token_on_behalf_of()` Return Value](#get_token_on_behalf_of-return-value)
   - [Error Handling](#error-handling)
   - [Inspecting Delegation After Token Verification](#inspecting-delegation-after-token-verification)
-- [Protecting API Routes](#protecting-api-routes)
 
 ## Configuration
 
@@ -349,6 +349,19 @@ auth0 = Auth0FastAPI(
 )
 ```
 
+## Protecting API Routes
+
+To protect a FastAPI route, use the `require_auth()` dependency. The SDK automatically detects and validates both Bearer and DPoP authentication schemes.
+
+```python
+@app.get("/api/protected")
+async def protected_route(claims=Depends(auth0.require_auth())):
+    return {"user_id": claims["sub"]}
+```
+
+> [!IMPORTANT]
+> The above is to protect API routes by the means of a bearer token, and not server-side rendering routes using a session.
+
 ## On-Behalf-Of Token Exchange
 
 Use `get_token_on_behalf_of()` on the underlying `api_client` when your API receives an Auth0 access token for itself and needs to exchange it for another Auth0 access token targeting a downstream API, while preserving the same user identity. This is especially useful for MCP servers and other intermediary APIs that need to call downstream APIs on behalf of the user.
@@ -411,7 +424,7 @@ async def schedule_meeting(request: Request, claims=Depends(auth0.require_auth()
 > - OBO requires a **confidential client**. Calling it without client credentials raises `GetTokenByExchangeProfileError`.
 
 > [!NOTE]
-> **DPoP:** `get_token_on_behalf_of()` forwards the incoming access token as the [RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693#section-2.1) `subject_token` and relies on Auth0 to handle any DPoP-specific behavior for that token.
+> **DPoP:** `get_token_on_behalf_of()` forwards the incoming access token as the [RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693#section-2.1) `subject_token` and does not carry a DPoP proof or request a DPoP-bound result. The exchanged token comes back as a plain bearer token, so the downstream call uses `Authorization: Bearer`. If the incoming token was DPoP-bound, that binding is not preserved on the exchanged token.
 
 ### `get_token_on_behalf_of()` Return Value
 
@@ -426,21 +439,26 @@ On success, the method returns a dict containing:
 
 ### Error Handling
 
-Two error types cover the failure scenarios you will encounter, both re-exported from `fastapi_plugin`:
+These error types cover the failure scenarios you will encounter. All are re-exported from `fastapi_plugin`, and all subclass `BaseAuthError`, so you can catch that single type if you want one handler for everything:
 
-- `GetTokenByExchangeProfileError`: Raised when `client_id` or `client_secret` is not configured on the plugin. This is a configuration error and will not be resolved at request time.
+- `MissingRequiredArgumentError`: Raised when `audience` or `access_token` is empty.
+- `GetTokenByExchangeProfileError`: Raised for a missing confidential client (no `client_id` or `client_secret`), and also at request time when the incoming token is malformed. This includes a token carrying the `Bearer ` prefix, a blank or whitespace-only token, a token with leading or trailing whitespace, and a `token_endpoint` missing from OIDC discovery. Pass the raw JWT with no `Bearer ` prefix to avoid the token-format cases.
 - `ApiError`: Raised when Auth0 rejects the exchange. The error preserves the OAuth error code and description from Auth0 (for example, `invalid_target` when the client is not authorized to access the downstream API).
+- `VerifyAccessTokenError`: Raised by `get_current_actor()` and `get_delegation_chain()` when the token's `act` claim is present but malformed.
 
 ```python
-from fastapi_plugin import ApiError, GetTokenByExchangeProfileError
+from fastapi_plugin import ApiError, GetTokenByExchangeProfileError, MissingRequiredArgumentError
 
 try:
     obo = await auth0.api_client.get_token_on_behalf_of(
         access_token=incoming_access_token,
         audience="https://calendar-api.example.com",
     )
+except MissingRequiredArgumentError:
+    # audience or access_token was empty.
+    raise
 except GetTokenByExchangeProfileError:
-    # The plugin is not configured with client credentials. Fix the configuration.
+    # Missing client credentials, or a malformed incoming token (for example the "Bearer " prefix).
     raise
 except ApiError as err:
     # Auth0 rejected the exchange. err.get_error_code() carries the OAuth error code.
@@ -452,7 +470,7 @@ except ApiError as err:
 When a downstream API receives an exchanged token, it can verify the token first and then inspect the `act` claim to identify the current actor for authorization and the full delegation chain for audit or attribution. The plugin re-exports `get_current_actor` and `get_delegation_chain` for this.
 
 ```python
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi_plugin import Auth0FastAPI, get_current_actor, get_delegation_chain
 
 app = FastAPI()
@@ -470,7 +488,7 @@ async def list_meetings(claims=Depends(auth0.require_auth())):
     delegation_chain = get_delegation_chain(claims)
 
     if current_actor not in ALLOWED_ACTORS:
-        raise PermissionError("unexpected actor")
+        raise HTTPException(status_code=403, detail={"error": "insufficient_permissions"})
 
     return {
         "user_sub": claims["sub"],
@@ -480,16 +498,3 @@ async def list_meetings(claims=Depends(auth0.require_auth())):
 ```
 
 Only the outermost `act.sub` represents the current actor and should be used for authorization decisions. Nested `act` values represent prior actors and are better suited for logging, audit, or attribution. See [RFC 8693, section 4.1](https://datatracker.ietf.org/doc/html/rfc8693#section-4.1) for details.
-
-## Protecting API Routes
-
-To protect a FastAPI route, use the `require_auth()` dependency. The SDK automatically detects and validates both Bearer and DPoP authentication schemes.
-
-```python
-@app.get("/api/protected")
-async def protected_route(claims=Depends(auth0.require_auth())):
-    return {"user_id": claims["sub"]}
-```
-
-> [!IMPORTANT]
-> The above is to protect API routes by the means of a bearer token, and not server-side rendering routes using a session.

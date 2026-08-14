@@ -11,12 +11,18 @@ from auth0_api_python import (
     get_current_actor,
     get_delegation_chain,
 )
+from auth0_api_python.errors import (
+    BaseAuthError,
+    MissingRequiredArgumentError,
+    VerifyAccessTokenError,
+)
 
 from .fast_api_client import Auth0FastAPI
 
 __all__ = [
     "ApiError",
     "Auth0FastAPI",
+    "BaseAuthError",
     "CacheAdapter",
     "ConfigurationError",
     "DomainsResolver",
@@ -24,7 +30,9 @@ __all__ = [
     "DomainsResolverError",
     "GetTokenByExchangeProfileError",
     "InMemoryCache",
+    "MissingRequiredArgumentError",
     "OnBehalfOfTokenResult",
+    "VerifyAccessTokenError",
     "get_current_actor",
     "get_delegation_chain",
 ]
