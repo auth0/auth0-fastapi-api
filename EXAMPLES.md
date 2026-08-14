@@ -16,6 +16,11 @@
   - [Security Requirements](#security-requirements)
   - [DPoP with MCD](#dpop-with-mcd)
 - [Discovery Cache Configuration](#discovery-cache-configuration)
+- [On-Behalf-Of Token Exchange](#on-behalf-of-token-exchange)
+  - [Performing the Exchange](#performing-the-exchange)
+  - [`get_token_on_behalf_of()` Return Value](#get_token_on_behalf_of-return-value)
+  - [Error Handling](#error-handling)
+  - [Inspecting Delegation After Token Verification](#inspecting-delegation-after-token-verification)
 - [Protecting API Routes](#protecting-api-routes)
 
 ## Configuration
@@ -343,6 +348,138 @@ auth0 = Auth0FastAPI(
     cache_ttl_seconds=1200
 )
 ```
+
+## On-Behalf-Of Token Exchange
+
+Use `get_token_on_behalf_of()` on the underlying `api_client` when your API receives an Auth0 access token for itself and needs to exchange it for another Auth0 access token targeting a downstream API, while preserving the same user identity. This is especially useful for MCP servers and other intermediary APIs that need to call downstream APIs on behalf of the user.
+
+The flow has three steps:
+
+1. **Verify** the incoming access token so your API rejects invalid or mis-targeted tokens before exchanging. `require_auth()` does this for the route.
+2. **Exchange** the verified token for a new access token scoped to the downstream API.
+3. **Call** the downstream API using the exchanged token.
+
+`get_token_on_behalf_of()` requires a confidential client. Configure the plugin with `client_id` and `client_secret`. Calling it without client credentials raises `GetTokenByExchangeProfileError`.
+
+### Performing the Exchange
+
+Inside a protected route, extract the raw incoming token, exchange it for a downstream audience, then call the downstream API:
+
+```python
+import httpx
+from fastapi import Depends, FastAPI, Request
+from fastapi_plugin import Auth0FastAPI
+
+app = FastAPI()
+
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",              # your MCP server's Auth0 tenant domain
+    audience="<AUTH0_AUDIENCE>",          # your MCP server's API audience
+    client_id="<AUTH0_CLIENT_ID>",        # required for OBO
+    client_secret="<AUTH0_CLIENT_SECRET>",  # required for OBO
+)
+
+@app.post("/schedule-meeting")
+async def schedule_meeting(request: Request, claims=Depends(auth0.require_auth())):
+    # require_auth() already verified the incoming token. Pass the raw token
+    # to the exchange, without the "Bearer " prefix.
+    incoming_access_token = request.headers["authorization"].split(" ", 1)[1]
+
+    obo = await auth0.api_client.get_token_on_behalf_of(
+        access_token=incoming_access_token,
+        audience="https://calendar-api.example.com",
+        scope="calendar:read calendar:write",
+    )
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://calendar-api.example.com/meetings",
+            headers={"Authorization": f"Bearer {obo['access_token']}"},
+            json=await request.json(),
+        )
+    response.raise_for_status()
+
+    return {"user": claims["sub"], "meeting": response.json()}
+```
+
+> [!TIP]
+> **Production notes:**
+> - `require_auth()` verifies the incoming token before your handler runs. Always protect routes with `require_auth()` before calling `get_token_on_behalf_of()`.
+> - Pass the raw JWT to `get_token_on_behalf_of()`. Do not include the `Bearer ` prefix or the full `Authorization` header.
+> - The downstream `audience` must match an API identifier configured in your Auth0 tenant, and your client must be authorized to access it.
+> - `get_token_on_behalf_of()` only returns access-token-oriented fields. It does not expose `id_token` or `refresh_token`.
+> - OBO requires a **confidential client**. Calling it without client credentials raises `GetTokenByExchangeProfileError`.
+
+> [!NOTE]
+> **DPoP:** `get_token_on_behalf_of()` forwards the incoming access token as the [RFC 8693](https://datatracker.ietf.org/doc/html/rfc8693#section-2.1) `subject_token` and relies on Auth0 to handle any DPoP-specific behavior for that token.
+
+### `get_token_on_behalf_of()` Return Value
+
+On success, the method returns a dict containing:
+
+- `access_token`: The exchanged access token issued for the downstream API.
+- `expires_in`: Token lifetime in seconds.
+- `expires_at`: The access token expiration time, in seconds since the Unix epoch.
+- `scope`: The scope granted for the exchanged token, if returned.
+- `token_type`: The returned token type, if returned.
+- `issued_token_type`: The returned RFC 8693 issued token type, if returned.
+
+### Error Handling
+
+Two error types cover the failure scenarios you will encounter, both re-exported from `fastapi_plugin`:
+
+- `GetTokenByExchangeProfileError`: Raised when `client_id` or `client_secret` is not configured on the plugin. This is a configuration error and will not be resolved at request time.
+- `ApiError`: Raised when Auth0 rejects the exchange. The error preserves the OAuth error code and description from Auth0 (for example, `invalid_target` when the client is not authorized to access the downstream API).
+
+```python
+from fastapi_plugin import ApiError, GetTokenByExchangeProfileError
+
+try:
+    obo = await auth0.api_client.get_token_on_behalf_of(
+        access_token=incoming_access_token,
+        audience="https://calendar-api.example.com",
+    )
+except GetTokenByExchangeProfileError:
+    # The plugin is not configured with client credentials. Fix the configuration.
+    raise
+except ApiError as err:
+    # Auth0 rejected the exchange. err.get_error_code() carries the OAuth error code.
+    raise
+```
+
+### Inspecting Delegation After Token Verification
+
+When a downstream API receives an exchanged token, it can verify the token first and then inspect the `act` claim to identify the current actor for authorization and the full delegation chain for audit or attribution. The plugin re-exports `get_current_actor` and `get_delegation_chain` for this.
+
+```python
+from fastapi import Depends, FastAPI
+from fastapi_plugin import Auth0FastAPI, get_current_actor, get_delegation_chain
+
+app = FastAPI()
+
+auth0 = Auth0FastAPI(
+    domain="<AUTH0_DOMAIN>",
+    audience="https://calendar-api.example.com",
+)
+
+ALLOWED_ACTORS = ["<MCP_SERVER_CLIENT_ID>"]
+
+@app.get("/meetings")
+async def list_meetings(claims=Depends(auth0.require_auth())):
+    current_actor = get_current_actor(claims)
+    delegation_chain = get_delegation_chain(claims)
+
+    if current_actor not in ALLOWED_ACTORS:
+        raise PermissionError("unexpected actor")
+
+    return {
+        "user_sub": claims["sub"],
+        "current_actor": current_actor,
+        "delegation_chain": delegation_chain,
+    }
+```
+
+Only the outermost `act.sub` represents the current actor and should be used for authorization decisions. Nested `act` values represent prior actors and are better suited for logging, audit, or attribution. See [RFC 8693, section 4.1](https://datatracker.ietf.org/doc/html/rfc8693#section-4.1) for details.
 
 ## Protecting API Routes
 
