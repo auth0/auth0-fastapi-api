@@ -327,6 +327,38 @@ When both `domain` and `domains` are configured, the SDK uses `domains` exclusiv
 
 For detailed examples including dynamic resolvers, cache configuration, security requirements, and DPoP integration, see the [Multiple Custom Domains section in EXAMPLES.md](EXAMPLES.md#multiple-custom-domains-mcd).
 
+### 8. On-Behalf-Of Token Exchange
+
+If your API receives an Auth0 access token for itself and needs to call a downstream API on behalf of the same user (for example, an MCP server), use `get_token_on_behalf_of` on the underlying `api_client` to exchange the incoming token for one scoped to the downstream API. This requires a confidential client (`client_id` and `client_secret`).
+
+```python
+import asyncio
+
+from fastapi_plugin import Auth0FastAPI
+
+async def main():
+    auth0 = Auth0FastAPI(
+        domain="<AUTH0_DOMAIN>",
+        audience="<AUTH0_AUDIENCE>",
+        client_id="<AUTH0_CLIENT_ID>",
+        client_secret="<AUTH0_CLIENT_SECRET>",
+    )
+    incoming_access_token = "..."  # the verified Auth0 access token to exchange
+
+    result = await auth0.api_client.get_token_on_behalf_of(
+        access_token=incoming_access_token,
+        audience="https://calendar-api.example.com",
+        scope="calendar:read calendar:write",
+    )
+    print(result["access_token"])  # short-lived token for the downstream API
+
+asyncio.run(main())
+```
+
+A downstream API can inspect the delegation on a verified token with the re-exported `get_current_actor` and `get_delegation_chain` helpers. Only the outermost `act.sub` should be used for authorization decisions.
+
+For the full flow, production notes, and delegation inspection, see the [On-Behalf-Of Token Exchange section in EXAMPLES.md](EXAMPLES.md#on-behalf-of-token-exchange).
+
 ## Feedback
 
 ### Contributing
