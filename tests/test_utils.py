@@ -2,7 +2,7 @@ import base64
 import hashlib
 import secrets
 import time
-from typing import Any, Optional, Union
+from typing import Any
 
 from authlib.jose import JsonWebKey, jwt
 
@@ -46,11 +46,11 @@ PUBLIC_DPOP_JWK = {
 async def generate_token(
     domain: str,
     user_id: str,
-    audience: Optional[str] = None,
-    issuer: Union[str, bool, None] = None,
+    audience: str | None = None,
+    issuer: str | bool | None = None,
     iat: bool = True,
     exp: bool = True,
-    claims: Optional[dict[str, Any]] = None,
+    claims: dict[str, Any] | None = None,
     expiration_time: int = 3600,
     token_type: str = "bearer"
 ) -> str:
@@ -105,7 +105,7 @@ def base64url_encode(data: bytes) -> str:
     """Base64URL encode without padding."""
     return base64.urlsafe_b64encode(data).decode('ascii').rstrip('=')
 
-def sha256_hash(data: Union[str, bytes]) -> str:
+def sha256_hash(data: str | bytes) -> str:
     """SHA256 hash and base64url encode."""
     if isinstance(data, str):
         data = data.encode('utf-8')
@@ -132,8 +132,8 @@ def calculate_jwk_thumbprint(jwk_dict: dict[str, Any]) -> str:
 async def generate_dpop_proof(
     http_method: str,
     http_url: str,
-    access_token: Optional[str] = None,
-    nonce: Optional[str] = None,
+    access_token: str | None = None,
+    nonce: str | None = None,
     iat_offset: int = 0
 ) -> str:
     """
@@ -193,13 +193,13 @@ async def generate_dpop_proof(
 async def generate_dpop_bound_token(
     domain: str,
     user_id: str,
-    audience: Optional[str] = None,
-    issuer: Union[str, bool, None] = None,
+    audience: str | None = None,
+    issuer: str | bool | None = None,
     iat: bool = True,
     exp: bool = True,
-    claims: Optional[dict[str, Any]] = None,
+    claims: dict[str, Any] | None = None,
     expiration_time: int = 3600,
-    cnf_jkt: Optional[str] = None
+    cnf_jkt: str | None = None
 ) -> str:
     """
     Generate a DPoP-bound access token for testing.

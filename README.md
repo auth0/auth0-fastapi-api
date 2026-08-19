@@ -14,7 +14,7 @@
 
 ### 1. Install the SDK
 
-_This library requires Python 3.9.2+._
+_This library requires Python 3.10+._
 
 ```shell
 pip install auth0-fastapi-api
