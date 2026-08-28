@@ -1,4 +1,3 @@
-from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
 from fastapi import HTTPException, Request
@@ -8,7 +7,7 @@ def http_exception(
     status_code: int,
     error: str,
     error_desc: str,
-    headers: Optional[dict[str, str]] = None
+    headers: dict[str, str] | None = None
 ) -> HTTPException:
     """
     Construct an HTTPException with appropriate headers.
@@ -45,7 +44,7 @@ def _should_trust_proxy(request: Request) -> bool:
         # If app.state doesn't exist or trust_proxy isn't set, don't trust
         return False
 
-def _parse_forwarded_host(forwarded_host: Optional[str]) -> Optional[str]:
+def _parse_forwarded_host(forwarded_host: str | None) -> str | None:
     """
     Parses X-Forwarded-Host header, handling multiple comma-separated values.
 

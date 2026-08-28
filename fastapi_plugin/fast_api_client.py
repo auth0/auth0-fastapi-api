@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Union
+from collections.abc import Callable
 
 from auth0_api_python.api_client import ApiClient, ApiClientOptions, BaseAuthError
 from auth0_api_python.cache import CacheAdapter
@@ -15,9 +15,9 @@ class Auth0FastAPI:
 
     def __init__(
         self,
-        domain: Optional[str] = None,
+        domain: str | None = None,
         audience: str = "",
-        domains: Optional[Union[list[str], Callable]] = None,
+        domains: list[str] | Callable | None = None,
         client_id=None,
         client_secret=None,
         custom_fetch=None,
@@ -25,7 +25,7 @@ class Auth0FastAPI:
         dpop_required=False,
         dpop_iat_leeway=30,
         dpop_iat_offset=300,
-        cache_adapter: Optional[CacheAdapter] = None,
+        cache_adapter: CacheAdapter | None = None,
         cache_ttl_seconds: int = 600,
         cache_max_entries: int = 100):
         """
@@ -72,7 +72,7 @@ class Auth0FastAPI:
 
     def require_auth(
         self,
-        scopes: Optional[Union[str, list[str]]] = None
+        scopes: str | list[str] | None = None
     ):
         """
         Returns an async FastAPI dependency that:
