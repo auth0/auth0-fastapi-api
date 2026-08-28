@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.0.0b9](https://github.com/auth0/auth0-fastapi-api/tree/1.0.0b9) (2026-08-28)
+[Full Changelog](https://github.com/auth0/auth0-fastapi-api/compare/1.0.0b8...1.0.0b9)
+
+**⚠️ Breaking: Python 3.9 is no longer supported**
+- Raises the minimum supported version to Python 3.10 so `fastapi`/`starlette` resolve to a patched release. Projects still on Python 3.9 must upgrade to Python 3.10 or later before installing this version. No public API has changed. [\#124](https://github.com/auth0/auth0-fastapi-api/pull/124) ([kishore7snehil](https://github.com/kishore7snehil))
+
+**Added**
+- feat: add On-Behalf-Of token exchange support [\#122](https://github.com/auth0/auth0-fastapi-api/pull/122) ([kishore7snehil](https://github.com/kishore7snehil))
+
 ## [1.0.0b8](https://github.com/auth0/auth0-fastapi-api/tree/1.0.0b8) (2026-08-03)
 [Full Changelog](https://github.com/auth0/auth0-fastapi-api/compare/1.0.0b7...1.0.0b8)
 
