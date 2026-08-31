@@ -170,7 +170,7 @@ async def protected():
 This way you can protected your endpoint and not have an unused variable.
 
 ### 4. Advanced Configuration
-- **Scopes**: If you need to check for specific scopes (like `read:data`), call r`equire_auth(scopes="read:data")` or pass a list of scopes. The SDK will return a 403 if the token lacks those scopes in its `scope` claim.
+- **Scopes**: If you need to check for specific scopes (like `read:data`), call `require_auth(scopes="read:data")` or pass a list of scopes. The SDK will return a 403 if the token lacks those scopes in its `scope` claim.
 ```python
 @app.get("/read-data")
 async def read_data_route(
